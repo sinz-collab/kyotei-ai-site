@@ -14,6 +14,10 @@ const num = (v, fallback = 0) => {
   return Number.isFinite(n) ? n : fallback;
 };
 const rateNum = (v) => num(v, -1);
+const pctInt = (v) => {
+  const n = num(v, NaN);
+  return Number.isFinite(n) ? `${Math.round(n)}%` : "-";
+};
 
 function dataUrl(path) {
   return `${DATA_BASE}/${String(path).replace(/^\//, "")}?t=${Date.now()}`;
@@ -33,6 +37,17 @@ function lane(n) {
 
 function gradeClass(c) {
   return String(c || "").startsWith("A") ? "grade a" : "grade";
+}
+
+function raceClosed(r) {
+  const date = currentPayload?.date || manifest?.date || "";
+  const ymd = String(date).includes("/") ? String(date).replaceAll("/", "-") : String(date);
+  const deadline = String(r?.deadline || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd) || !/^\d{1,2}:\d{2}$/.test(deadline)) return false;
+  const [h, m] = deadline.split(":").map(Number);
+  const d = new Date(`${ymd}T00:00:00+09:00`);
+  d.setHours(h, m, 0, 0);
+  return Date.now() > d.getTime();
 }
 
 function fBadge(b) {
@@ -114,7 +129,7 @@ function renderRace() {
   $("venueTitle").textContent = `${currentPayload.venue || "-"} ${currentRaceNo}R`;
   $("venueMeta").textContent = `${currentPayload.date || ""} / 締切 ${r.deadline || "-"} / ${currentPayload.engine || ""}`;
   $("raceTabs").innerHTML = (currentPayload.races || []).map((x) =>
-    `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""}" onclick="currentRaceNo=${x.race};renderRace()">${x.race}R</button>`
+    `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="currentRaceNo=${x.race};renderRace()">${x.race}R</button>`
   ).join("");
   document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x.dataset.pane === currentPane));
   renderPane();
@@ -461,17 +476,17 @@ function renderPrediction() {
     <h2>${currentPayload.venue || ""}ロジック予想</h2>
     <div class="probgrid">
       <div class="probcard"><span>SAB</span><b>${safe(p.sab)}</b></div>
-      <div class="probcard"><span>荒れ指数</span><b>${safe(p.upsetIndex)}%</b></div>
+      <div class="probcard"><span>荒れ指数</span><b>${pctInt(p.upsetIndex)}</b></div>
       <div class="probcard"><span>攻め役</span><b>${safe(p.attack?.attackLane)}号艇</b></div>
     </div>
     <div class="note">軸候補：${r.axisLane ? r.axisLane + "号艇" : "-"} / ${safe(r.comment, "")}</div>
   </div>
   <div class="card"><h2>全艇確率</h2>
-    <table><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th></tr>${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${safe(p.win?.[n])}%</td><td>${safe(p.second?.[n])}%</td><td>${safe(p.third?.[n])}%</td></tr>`).join("")}</table>
+    <table><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th></tr>${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${pctInt(p.win?.[n])}</td><td>${pctInt(p.second?.[n])}</td><td>${pctInt(p.third?.[n])}</td></tr>`).join("")}</table>
   </div>
   <div class="card"><h2>買い目</h2>
     <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">AI予想</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">AI荒れ予想</button></div>
-    ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${Number(t.prob || 0).toFixed(2)}%</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">買い目はまだありません。</div>`}
+    ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">買い目はまだありません。</div>`}
   </div>`;
 }
 

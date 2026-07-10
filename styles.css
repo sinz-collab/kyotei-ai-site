@@ -14,6 +14,7 @@ body{margin:0;background:var(--bg);color:var(--ink)}
 .tabs::-webkit-scrollbar,.subnav::-webkit-scrollbar,.race-tabs::-webkit-scrollbar{display:none}
 button{font-family:inherit;border:0;border-radius:999px;background:#fff;color:#526071;padding:9px 12px;font-weight:950;white-space:nowrap;box-shadow:0 2px 8px rgba(15,39,66,.04)}
 button.active{background:var(--navy);color:#fff}
+.race-tabs button.closed:not(.active){background:#e5e7eb;color:#94a3b8;box-shadow:none}
 .content{padding:14px 11px 28px}
 .date-card,.card,.race-head{background:#fff;border:1px solid var(--line);border-radius:18px;margin-bottom:12px;padding:14px;box-shadow:0 8px 22px rgba(15,23,42,.05)}
 .date-card{text-align:center}.date-card b{font-size:18px}.date-card span,.note{display:block;color:var(--muted);font-size:12px;line-height:1.55;margin-top:4px}
