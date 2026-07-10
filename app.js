@@ -7,10 +7,16 @@ let currentPane = "entry";
 let ticketMode = "ai";
 
 const $ = (id) => document.getElementById(id);
-const yen = (v) => v ?? "-";
+const safe = (v, fallback = "-") => (v === undefined || v === null || v === "" ? fallback : v);
+const yen = (v) => safe(v);
+const num = (v, fallback = 0) => {
+  const n = Number(String(v ?? "").replace(/[^\d.\-]/g, ""));
+  return Number.isFinite(n) ? n : fallback;
+};
+const rateNum = (v) => num(v, -1);
 
 function dataUrl(path) {
-  return `${DATA_BASE}/${path.replace(/^\//, "")}?t=${Date.now()}`;
+  return `${DATA_BASE}/${String(path).replace(/^\//, "")}?t=${Date.now()}`;
 }
 
 function lane(n) {
@@ -27,6 +33,22 @@ function lane(n) {
 
 function gradeClass(c) {
   return String(c || "").startsWith("A") ? "grade a" : "grade";
+}
+
+function fBadge(b) {
+  const f = String(b.f || "");
+  return /^F[1-9]/.test(f) ? `<span class="f-badge">${f}</span>` : "";
+}
+
+function boatColor(n) {
+  return {
+    1: "#fff",
+    2: "#111827",
+    3: "#dc2626",
+    4: "#1d7eea",
+    5: "#facc15",
+    6: "#10a38a",
+  }[Number(n)] || "#64748b";
 }
 
 async function fetchJson(path) {
@@ -64,7 +86,10 @@ async function openVenue(slug) {
   if (!v) return;
   $("syncState").textContent = "FETCH";
   currentPayload = await fetchJson(v.dataPath || v.latestPath);
+  currentPayload.venue = currentPayload.venue || v.name;
+  currentPayload.date = currentPayload.date || v.date || manifest.date;
   currentRaceNo = currentPayload.races?.[0]?.race || 1;
+  currentPane = "entry";
   $("syncState").textContent = "LIVE JSON";
   showView("race");
   renderRace();
@@ -77,25 +102,29 @@ function showView(view) {
 }
 
 function race() {
-  return currentPayload.races.find((r) => Number(r.race) === Number(currentRaceNo)) || {};
+  return currentPayload?.races?.find((r) => Number(r.race) === Number(currentRaceNo)) || {};
 }
 
 function pred() {
-  return currentPayload.preds?.[String(currentRaceNo)] || {};
+  return currentPayload?.preds?.[String(currentRaceNo)] || {};
 }
 
 function renderRace() {
+  const r = race();
   $("venueTitle").textContent = `${currentPayload.venue || "-"} ${currentRaceNo}R`;
-  $("venueMeta").textContent = `${currentPayload.date || ""} / 締切 ${race().deadline || "-"} / ${currentPayload.engine || ""}`;
-  $("raceTabs").innerHTML = (currentPayload.races || []).map((r) =>
-    `<button class="${Number(r.race) === Number(currentRaceNo) ? "active" : ""}" onclick="currentRaceNo=${r.race};renderRace()">${r.race}R</button>`
+  $("venueMeta").textContent = `${currentPayload.date || ""} / 締切 ${r.deadline || "-"} / ${currentPayload.engine || ""}`;
+  $("raceTabs").innerHTML = (currentPayload.races || []).map((x) =>
+    `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""}" onclick="currentRaceNo=${x.race};renderRace()">${x.race}R</button>`
   ).join("");
+  document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x.dataset.pane === currentPane));
   renderPane();
 }
 
 function renderPane() {
   const map = {
     entry: renderEntry,
+    compare: renderCompare,
+    realtime: renderRealtime,
     tide: renderTide,
     prediction: renderPrediction,
     logs: renderLogs,
@@ -105,23 +134,290 @@ function renderPane() {
   $("pane").innerHTML = (map[currentPane] || renderEntry)();
 }
 
+function rankClass(field, laneNo, lowerBetter = false) {
+  const rows = (race().racers || [])
+    .map((b) => [Number(b.lane), num(b[field], NaN)])
+    .filter((x) => Number.isFinite(x[1]));
+  rows.sort((a, b) => lowerBetter ? a[1] - b[1] : b[1] - a[1]);
+  const rank = rows.findIndex((x) => x[0] === Number(laneNo)) + 1;
+  return rank === 1 ? "rank1" : rank === 2 ? "rank2" : "";
+}
+
+function statBox(label, value, cls = "") {
+  return `<div class="stat ${cls}"><span>${label}</span><b>${safe(value)}</b></div>`;
+}
+
+function finishClass(finish) {
+  const f = String(finish || "");
+  if (/^[12]/.test(f)) return "good";
+  if (/^[34]/.test(f)) return "mid";
+  if (/^[56]/.test(f)) return "bad";
+  if (/[転妨失欠ＦFエ]/.test(f)) return "trouble";
+  return "";
+}
+
+function normalizeSeasonGroups(b) {
+  if (Array.isArray(b.season_groups) && b.season_groups.length) return b.season_groups;
+  const runs = Array.isArray(b.season_runs) ? b.season_runs : [];
+  const groups = [];
+  for (let i = 0; i < runs.length; i += 2) {
+    groups.push({ day: `${Math.floor(i / 2) + 1}日目`, runs: runs.slice(i, i + 2) });
+  }
+  return groups;
+}
+
+function seasonRunCard(run) {
+  if (!run) return `<div class="season-run-card empty"><div class="meta">-</div><div class="finish">-</div></div>`;
+  return `<div class="season-run-card ${finishClass(run.finish)}">
+    <div class="meta"><b>${safe(run.race)}</b> / ${safe(run.frame)}枠<br>ST ${safe(run.st)}</div>
+    <div class="finish">${safe(run.finish)}</div>
+  </div>`;
+}
+
+function seasonBoard(b) {
+  const groups = normalizeSeasonGroups(b);
+  if (!groups.length) return `<div class="note">節間成績なし</div>`;
+  return `<div class="season-board">${groups.map((g) => `<div class="season-day-row">
+    <div class="season-day-head">${safe(g.day)}</div>
+    ${seasonRunCard((g.runs || [])[0])}
+    ${seasonRunCard((g.runs || [])[1])}
+  </div>`).join("")}</div>`;
+}
+
+function courseLabel(b) {
+  const s = String(b.course_strength || "");
+  if (s) return s;
+  const top3 = num(b.course_top3_rate, NaN);
+  if (!Number.isFinite(top3)) return "データ待ち";
+  if (top3 >= 60) return "得意";
+  if (top3 <= 30) return "苦手";
+  return "標準";
+}
+
+function courseSummary(b) {
+  return `<div class="coursebox">
+    <b>コース適性：<span class="${courseLabel(b).includes("得意") ? "good" : courseLabel(b).includes("苦手") ? "bad" : "normal"}">${courseLabel(b)}</span></b><br>
+    件数 ${safe(b.course_starts)} / 1着 ${safe(b.course_win_rate)}% / 3連 ${safe(b.course_top3_rate)}% / 信頼 ${safe(b.course_reliability)}
+  </div>`;
+}
+
 function renderEntry() {
   const r = race();
-  return `<div class="card"><h2>${r.race}R 締切 ${r.deadline || "-"} <span class="note">${r.type || ""}</span></h2>
+  return `<div class="card"><h2>${r.race}R 締切 ${safe(r.deadline)} <span class="note">${safe(r.type, "")}</span></h2>
   ${(r.racers || []).map((b) => `<div class="boat">${lane(b.lane)}<div>
-    <div class="name">${b.name}<span class="${gradeClass(b.class)}">${b.class || ""}</span></div>
-    <div class="sub">${b.age || "-"}歳 / ${b.weight || "-"}kg　${b.branch || "-"}支部 / ${b.home || "-"}出身 / ${b.f || ""}</div>
+    <div class="name">${safe(b.name)}${b.female ? " 💗" : ""}<span class="${gradeClass(b.class)}">${safe(b.class, "")}</span>${fBadge(b)}</div>
+    <div class="sub">${safe(b.age)}歳 / ${safe(b.weight)}kg　${safe(b.branch)}支部 / ${safe(b.home)}出身 / ${safe(b.f, "")}</div>
     <div class="stats">
-      <div class="stat"><span>全国</span><b>${b.nat_win ?? "-"}</b></div>
-      <div class="stat"><span>当地</span><b>${b.local_win ?? "-"}</b></div>
-      <div class="stat"><span>平均ST</span><b>${b.avg_st ?? "-"}</b></div>
+      <div class="stat"><span>全国</span><b>${safe(b.nat_win)}</b></div>
+      <div class="stat"><span>当地</span><b>${safe(b.local_win)}</b></div>
+      <div class="stat"><span>平均ST</span><b>${safe(b.avg_st)}</b></div>
     </div>
     <div class="stats">
-      <div class="stat"><span>モーター</span><b>No.${b.motor_no ?? "-"}</b></div>
-      <div class="stat"><span>2連率</span><b>${b.motor_2 ?? "-"}%</b></div>
-      <div class="stat"><span>3連率</span><b>${b.motor_3 ?? "-"}%</b></div>
+      <div class="stat"><span>モーター</span><b>No.${safe(b.motor_no)}</b></div>
+      ${statBox("2連率", b.motor_2, rankClass("motor_2", b.lane))}
+      ${statBox("3連率", b.motor_3, rankClass("motor_3", b.lane))}
     </div>
+    ${courseSummary(b)}
+    <div class="season">節間成績 ${b.hayami ? `<span class="note"> / 早見 ${b.hayami}</span>` : ""}${seasonBoard(b)}</div>
   </div></div>`).join("")}</div>`;
+}
+
+function gradeScore(b) {
+  return ({ A1: 80, A2: 65, B1: 45, B2: 30 }[b.class] ?? 40) + num(b.nat_win) * 4;
+}
+
+function motorScore(b) {
+  return rateNum(b.motor_2) * 0.45 + rateNum(b.motor_3) * 0.55;
+}
+
+function localScore(b) {
+  return num(b.local_win) * 10;
+}
+
+function localStScore(b) {
+  const st = num(b.boaters_local_avg_st || b.local_avg_st || b.avg_st, 9);
+  return st >= 9 ? 0 : Math.max(0, 100 - st * 420);
+}
+
+function courseScore(b) {
+  return num(b.course_top3_rate) * 0.7 + num(b.course_top3_diff) * 0.9 + (String(b.course_reliability) === "A" ? 10 : String(b.course_reliability) === "B" ? 6 : 0);
+}
+
+function kimariteInfo(b) {
+  if (Number(b.lane) === 1) {
+    const v = num(b.escape_rate, NaN);
+    return { score: Number.isFinite(v) ? v : 0, main: `逃げ ${Number.isFinite(v) ? v.toFixed(1) : "-"}%`, sub: `${safe(b.kimarite_starts)}走 / 勝 ${safe(b.kimarite_wins)}` };
+  }
+  const s = num(b.sashi_rate, NaN), m = num(b.makuri_rate, NaN), ms = num(b.makuri_sashi_rate, NaN);
+  const score = Math.max(Number.isFinite(s) ? s : 0, Number.isFinite(m) ? m : 0, Number.isFinite(ms) ? ms : 0);
+  return { score, main: `差 ${Number.isFinite(s) ? s.toFixed(1) : "-"}% / ま ${Number.isFinite(m) ? m.toFixed(1) : "-"}%`, sub: `ま差 ${Number.isFinite(ms) ? ms.toFixed(1) : "-"}%` };
+}
+
+function seasonScore(b) {
+  const runs = normalizeSeasonGroups(b).flatMap((g) => g.runs || []);
+  if (!runs.length) return 0;
+  let score = 45, stSum = 0, stCnt = 0;
+  for (const run of runs) {
+    const fin = Number(String(run.finish || "").match(/[1-6]/)?.[0]);
+    if (fin) score += fin === 1 ? 22 : fin === 2 ? 14 : fin === 3 ? 8 : fin >= 5 ? -10 : -2;
+    const st = num(run.st, NaN);
+    if (Number.isFinite(st)) {
+      stSum += st;
+      stCnt++;
+    }
+  }
+  if (stCnt) {
+    const avg = stSum / stCnt;
+    score += avg <= 0.12 ? 14 : avg <= 0.15 ? 7 : avg >= 0.22 ? -10 : avg >= 0.19 ? -5 : 0;
+  }
+  return score;
+}
+
+function seasonCompareInfo(b) {
+  const runs = normalizeSeasonGroups(b).flatMap((g) => g.runs || []);
+  if (!runs.length) return { score: 0, main: "-", sub: "節間なし" };
+  let top3 = 0, stSum = 0, stCnt = 0;
+  const chips = runs.slice(-5).map((run) => {
+    if (/^[123]/.test(String(run.finish || ""))) top3++;
+    const st = num(run.st, NaN);
+    if (Number.isFinite(st)) {
+      stSum += st;
+      stCnt++;
+    }
+    return `<span class="cs-fin ${finishClass(run.finish)}" title="${safe(run.race)} ${safe(run.frame)}枠 ST${safe(run.st)}">${safe(run.finish)}</span>`;
+  }).join("");
+  const avg = stCnt ? "." + String(Math.round((stSum / stCnt) * 100)).padStart(2, "0") : "-";
+  return { score: seasonScore(b), main: `<span class="compare-season">${chips}</span>`, sub: `3内 ${top3}/${runs.length}・平均ST ${avg}` };
+}
+
+function compareMark(score) {
+  return score >= 82 ? "◎" : score >= 66 ? "○" : score >= 48 ? "△" : "-";
+}
+
+function compareRank(rows, key, laneNo) {
+  const arr = rows.map((x) => [x.lane, x[key].score]).filter((x) => Number.isFinite(x[1])).sort((a, b) => b[1] - a[1]);
+  const rank = arr.findIndex((x) => Number(x[0]) === Number(laneNo)) + 1;
+  return rank === 1 ? "rank1" : rank === 2 ? "rank2" : "";
+}
+
+function compareCell(rows, row, key) {
+  const c = row[key], cls = compareRank(rows, key, row.lane);
+  return `<td><div class="compare-cell ${cls}"><span class="compare-main">${c.main}</span><span class="compare-sub">${c.sub}</span></div></td>`;
+}
+
+function renderCompare() {
+  const r = race();
+  const rows = (r.racers || []).map((b) => {
+    const ki = kimariteInfo(b), si = seasonCompareInfo(b);
+    const localSt = b.boaters_local_avg_st || b.local_avg_st || b.avg_st;
+    return {
+      lane: b.lane,
+      name: b.name,
+      grade: { score: gradeScore(b), main: `${compareMark(gradeScore(b))} ${safe(b.class)}`, sub: `全国 ${safe(b.nat_win)}` },
+      kimarite: { score: ki.score, main: ki.main, sub: ki.sub },
+      motor: { score: motorScore(b), main: `${compareMark(motorScore(b))} No.${safe(b.motor_no)}`, sub: `2連 ${safe(b.motor_2)} / 3連 ${safe(b.motor_3)}` },
+      local: { score: localScore(b), main: `${compareMark(localScore(b))} ${safe(b.local_win)}`, sub: "当地勝率" },
+      localSt: { score: localStScore(b), main: `${compareMark(localStScore(b))} ${safe(localSt)}`, sub: `当地平均ST / ${safe(b.boaters_local_st_rank || b.local_st_order)}` },
+      course: { score: courseScore(b), main: `${compareMark(courseScore(b))} ${courseLabel(b)}`, sub: `3連 ${safe(b.course_top3_rate)}% / 差 ${safe(b.course_top3_diff)}pt` },
+      season: si,
+    };
+  });
+  return `<div class="card"><h2>${r.race}R 選手比較</h2>
+    <div class="note">各項目を簡易スコア化。列ごとに1位は薄い赤、2位は薄い黄色で表示します。</div>
+    <div class="compare-wrap"><table class="compare-table">
+      <tr><th>名前</th><th>格</th><th>決まり手</th><th>モーター</th><th>当地</th><th>当地ST</th><th>コース適性</th><th>節間成績</th></tr>
+      ${rows.map((row) => `<tr><td>${lane(row.lane)} <b>${safe(row.name)}</b></td>${compareCell(rows,row,"grade")}${compareCell(rows,row,"kimarite")}${compareCell(rows,row,"motor")}${compareCell(rows,row,"local")}${compareCell(rows,row,"localSt")}${compareCell(rows,row,"course")}${compareCell(rows,row,"season")}</tr>`).join("")}
+    </table></div>
+  </div>`;
+}
+
+function tableFromRows(title, rows, columns) {
+  if (!rows?.length) return `<div class="card"><h2>${title}</h2><div class="note">まだ未取得です。</div></div>`;
+  return `<div class="card"><h2>${title}</h2><table><tr>${columns.map((c) => `<th>${c.label}</th>`).join("")}</tr>
+    ${rows.map((row) => `<tr>${columns.map((c) => `<td>${safe(row[c.key])}</td>`).join("")}</tr>`).join("")}</table></div>`;
+}
+
+function normalizeRealtimeRows(obj) {
+  if (Array.isArray(obj)) return obj;
+  if (!obj || typeof obj !== "object") return [];
+  return Object.entries(obj).map(([laneNo, value]) => {
+    if (value && typeof value === "object") return { lane: value.lane || laneNo, ...value };
+    return { lane: laneNo, value };
+  });
+}
+
+function rowMap(obj) {
+  const rows = normalizeRealtimeRows(obj);
+  const map = {};
+  for (const x of rows) {
+    const n = Number(x.lane || x.frame || x.course);
+    if (n) map[n] = x;
+  }
+  return map;
+}
+
+function valueRankClass(map, laneNo, key, lowerBetter = true) {
+  const arr = [1,2,3,4,5,6].map((n) => [n, num(map[n]?.[key], NaN)]).filter((x) => Number.isFinite(x[1]));
+  arr.sort((a, b) => lowerBetter ? a[1] - b[1] : b[1] - a[1]);
+  const rank = arr.findIndex((x) => x[0] === Number(laneNo)) + 1;
+  return rank === 1 ? "rank1" : rank === 2 ? "rank2" : "";
+}
+
+function timeBadge(value, cls = "") {
+  return `<span class="time-badge ${cls}">${safe(value)}</span>`;
+}
+
+function renderSlit(realtime) {
+  const last = rowMap(realtime.last || realtime.lastMinute || realtime.before || realtime.direct || realtime.slit || realtime.start || realtime.st || []);
+  const rows = Object.keys(last).length ? [1,2,3,4,5,6].filter((n) => last[n]) : [];
+  if (!rows.length) return `<h3>スリット隊形</h3><div class="note">スリット情報はまだ未取得です。</div>`;
+  const line = 66;
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const pos = (n) => {
+    const raw = String(last[n]?.st_raw || last[n]?.st || last[n]?.ST || "");
+    const v = num(raw, NaN);
+    if (!Number.isFinite(v)) return 45;
+    if (raw.startsWith("F")) return clamp(line + Math.abs(v) * 150, line + 4, 82);
+    return clamp(line - v * 185, 28, line - 2);
+  };
+  const order = rows.sort((a, b) => num(last[a]?.start_course || last[a]?.course, a) - num(last[b]?.start_course || last[b]?.course, b));
+  const changed = order.some((n, i) => n !== i + 1);
+  return `<h3>スリット隊形 ${changed ? '<span class="note">進入変更あり</span>' : ""}</h3>
+    <div class="slit">${order.map((n, i) => `<div class="slit-row" style="top:${22 + i * 34}px">
+      <div class="slit-lane">${lane(n)}<small>${last[n]?.start_course || last[n]?.course ? safe(last[n]?.start_course || last[n]?.course) + "コース" : ""}</small></div>
+      <div class="boatmark" style="left:calc(${pos(n)}% - 17px);background:${boatColor(n)};color:${n === 1 || n === 5 ? "#111" : "#fff"}">${n}</div>
+      <div class="slit-st ${String(last[n]?.st_raw || last[n]?.st || "").startsWith("F") ? "f" : ""}">${safe(last[n]?.st_raw || last[n]?.st || last[n]?.ST)}</div>
+    </div>`).join("")}</div>`;
+}
+
+function renderRealtime() {
+  const p = pred();
+  const rt = p.realtime || {};
+  const last = rowMap(rt.last || rt.lastMinute || rt.before || rt.direct);
+  const original = rowMap(rt.original || rt.originalExhibition || rt.sum || rt.display);
+  const weather = rt.weather || {};
+  const hasLast = Object.keys(last).length > 0;
+  const hasOriginal = Object.keys(original).length > 0;
+  return `<div class="card"><h2>直前情報</h2>
+      <div class="note">天候 ${safe(weather.weather)} / 風速 ${safe(weather.wind || weather.windSpeed)}m / 波 ${safe(weather.wave || weather.waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
+      ${hasLast ? `<table><tr><th>枠</th><th>展示</th><th>ST</th><th>チルト</th><th>部品</th></tr>
+        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(last[n]?.time || last[n]?.displayTime, valueRankClass(last, n, last[n]?.time ? "time" : "displayTime"))}</td><td>${safe(last[n]?.st_raw || last[n]?.st || last[n]?.ST)}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
+      </table>` : `<div class="note">直前情報はまだ未取得です。</div>`}
+      ${renderSlit(rt)}
+      <h3>オリジナル展示</h3>
+      ${hasOriginal ? `<table><tr><th>枠</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
+        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(original[n]?.lap, valueRankClass(original, n, "lap"))}</td><td>${timeBadge(original[n]?.turn, valueRankClass(original, n, "turn"))}</td><td>${timeBadge(original[n]?.line || original[n]?.straight, valueRankClass(original, n, original[n]?.line ? "line" : "straight"))}</td><td>${timeBadge(original[n]?.show || original[n]?.display, valueRankClass(original, n, original[n]?.show ? "show" : "display"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(original[n]?.sum_diff || original[n]?.diff)}</td></tr>`).join("")}
+      </table>` : `<div class="note">オリジナル展示はまだ未取得です。</div>`}
+    </div>
+    <div class="card"><h2>水面気象</h2>
+      <div class="stats">
+        <div class="stat"><span>天候</span><b>${safe(weather.weather)}</b></div>
+        <div class="stat"><span>風速</span><b>${safe(weather.wind || weather.windSpeed)}</b></div>
+        <div class="stat"><span>風向</span><b>${safe(weather.windDirection)}</b></div>
+        <div class="stat"><span>波高</span><b>${safe(weather.wave || weather.waveHeight)}</b></div>
+      </div>
+      <div class="note">データが取得済みになると、このタブに自動で反映されます。</div>
+    </div>`;
 }
 
 function tideSvg(events) {
@@ -149,11 +445,11 @@ function tideSvg(events) {
 function renderTide() {
   const p = pred(), z = p.tideZone || {}, t = currentPayload.tide || {}, events = t.events || [];
   return `<div class="card"><h2>${currentPayload.venue || ""} 潮見表</h2>
-    <div class="tide-type">${t.tideType || "-"}</div>
-    <div class="note">${t.date || ""} / ${t.source || ""}<br>${t.summary || ""}</div>
-    <div class="attack">このレースの潮判定：${z.nearest || "-"} / ${z.phase || z.zone || "-"} / ${z.bucket || z.band || "-"}</div>
+    <div class="tide-type">${safe(t.tideType)}</div>
+    <div class="note">${safe(t.date, "")} / ${safe(t.source, "")}<br>${safe(t.summary, "")}</div>
+    <div class="attack">このレースの潮判定：${safe(z.nearest)} / ${safe(z.phase || z.zone)} / ${safe(z.bucket || z.band)}</div>
     ${tideSvg(events)}
-    <table><tr><th>種別</th><th>時刻</th><th>潮位</th></tr>${events.map((x) => `<tr><td>${x.type}</td><td>${x.time}</td><td>${x.level}cm</td></tr>`).join("")}</table>
+    <table><tr><th>種別</th><th>時刻</th><th>潮位</th></tr>${events.map((x) => `<tr><td>${safe(x.type)}</td><td>${safe(x.time)}</td><td>${safe(x.level)}cm</td></tr>`).join("")}</table>
   </div>`;
 }
 
@@ -164,18 +460,18 @@ function renderPrediction() {
     <div class="stage ${s.color || ""}"><div><b>${s.label || "AI予想"}</b><br>${s.statusText || ""}</div><span>${s.badge || ""}</span></div>
     <h2>${currentPayload.venue || ""}ロジック予想</h2>
     <div class="probgrid">
-      <div class="probcard"><span>SAB</span><b>${p.sab || "-"}</b></div>
-      <div class="probcard"><span>荒れ指数</span><b>${p.upsetIndex ?? "-"}%</b></div>
-      <div class="probcard"><span>攻め役</span><b>${p.attack?.attackLane ?? "-"}号艇</b></div>
+      <div class="probcard"><span>SAB</span><b>${safe(p.sab)}</b></div>
+      <div class="probcard"><span>荒れ指数</span><b>${safe(p.upsetIndex)}%</b></div>
+      <div class="probcard"><span>攻め役</span><b>${safe(p.attack?.attackLane)}号艇</b></div>
     </div>
-    <div class="note">軸候補：${r.axisLane ? r.axisLane + "号艇" : "-"} / ${r.comment || ""}</div>
+    <div class="note">軸候補：${r.axisLane ? r.axisLane + "号艇" : "-"} / ${safe(r.comment, "")}</div>
   </div>
   <div class="card"><h2>全艇確率</h2>
-    <table><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th></tr>${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${p.win?.[n] ?? "-"}%</td><td>${p.second?.[n] ?? "-"}%</td><td>${p.third?.[n] ?? "-"}%</td></tr>`).join("")}</table>
+    <table><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th></tr>${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${safe(p.win?.[n])}%</td><td>${safe(p.second?.[n])}%</td><td>${safe(p.third?.[n])}%</td></tr>`).join("")}</table>
   </div>
   <div class="card"><h2>買い目</h2>
     <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">AI予想</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">AI荒れ予想</button></div>
-    ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${t.role || ""}</span></div><div><span class="note">確率</span><br><b>${Number(t.prob || 0).toFixed(2)}%</b></div><div><span class="note">オッズ</span><br><b>${t.odds ?? "-"}</b></div></div>`).join("")}
+    ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${Number(t.prob || 0).toFixed(2)}%</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">買い目はまだありません。</div>`}
   </div>`;
 }
 
@@ -183,20 +479,32 @@ function renderLogs() {
   const p = pred();
   const logs = p.logs || [];
   return `<div class="card"><h2>${currentRaceNo}R 補正ログ</h2>
-    ${logs.map((l) => `<div class="log"><div class="log-title">${l.lane ? l.lane + "号艇 " : ""}${l.name || l.stage || ""}</div><div class="log-body">${Array.isArray(l.notes) ? l.notes.join("<br>") : (l.reason || "")}</div></div>`).join("") || `<div class="note">補正ログなし</div>`}
+    ${logs.map((l) => `<div class="log"><div class="log-title">${l.lane ? l.lane + "号艇 " : ""}${safe(l.name || l.stage, "")}</div><div class="log-body">${Array.isArray(l.notes) ? l.notes.join("<br>") : safe(l.reason, "")}</div></div>`).join("") || `<div class="note">補正ログなし</div>`}
   </div>`;
 }
 
 function renderResult() {
   const p = pred(), r = p.result || {};
-  if (!r.order) return `<div class="card"><h2>結果</h2><div class="note">${r.message || "結果はまだ未取得です。"}</div></div>`;
-  return `<div class="card"><h2>結果</h2><div class="attack">${r.order}</div><div class="stats"><div class="stat"><span>払戻</span><b>${yen(r.payout3t)}</b></div><div class="stat"><span>人気</span><b>${yen(r.popularity3t)}</b></div><div class="stat"><span>決まり手</span><b>${yen(r.kimarite)}</b></div></div></div>`;
+  const hitAi = (r.hitAi || []).length, hitUpset = (r.hitUpset || []).length;
+  const order = String(r.order || "").split("-").filter(Boolean);
+  return `<div class="card result-main"><h2>レース結果</h2>
+    <div class="stage ${r.status === "ok" ? "green" : "yellow"}"><div><b>${r.status === "ok" ? "結果取得済み" : "結果待ち"}</b><br>${r.message || ""}</div><span>${r.status === "ok" ? "確定" : "待機"}</span></div>
+    ${r.order ? `<div class="result-line"><div class="result-label">3連単 着順</div><div class="finish-row">${order.map((n, i) => `${i ? '<span class="finish-arrow">→</span>' : ""}${finishBoat(n)}`).join("")}</div></div>
+      <div class="result-pay"><div class="paybox"><span>払戻</span><b>${safe(r.payout3t)}</b></div><div class="paybox"><span>人気</span><b>${safe(r.popularity3t)}</b></div></div>` :
+      `<div class="result-line"><div class="result-label">結果待ち</div><div class="note">締切9分後から結果取得を試します。</div></div>`}
+    <div class="result-sub"><div class="paybox"><span>決まり手</span><b>${safe(r.kimarite)}</b></div><div class="paybox"><span>AI予想</span><b>${hitAi ? "的中" : "-"}</b></div><div class="paybox"><span>AI荒れ</span><b>${hitUpset ? "的中" : "-"}</b></div></div>
+  </div>`;
 }
 
 function renderOdds() {
   const odds = pred().odds || {};
   const items = Object.entries(odds).slice(0, 120);
-  return `<div class="card"><h2>オッズ</h2>${items.length ? items.map(([k, v]) => `<div class="ticket"><div class="combo">${k}</div><b>${v}</b></div>`).join("") : `<div class="note">オッズはまだ未取得です。</div>`}</div>`;
+  return `<div class="card"><h2>3連単オッズ</h2>${items.length ? `<div class="oddsboard">${items.map(([k, v]) => `<div class="odrow"><b>${k}</b><span>${String(k).split("-").map((x) => lane(+x)).join("")}</span><strong>${v}</strong></div>`).join("")}</div>` : `<div class="note">オッズはまだ未取得です。</div>`}</div>`;
+}
+
+function finishBoat(n) {
+  const cls = {1:"one",2:"two",3:"three",4:"four",5:"five",6:"six"}[Number(n)] || "";
+  return `<span class="finish-boat ${cls}">${n}</span>`;
 }
 
 document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => showView(b.dataset.view));
