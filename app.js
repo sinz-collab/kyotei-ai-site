@@ -513,8 +513,60 @@ function renderResult() {
 
 function renderOdds() {
   const odds = pred().odds || {};
-  const items = Object.entries(odds).slice(0, 120);
-  return `<div class="card"><h2>3連単オッズ</h2>${items.length ? `<div class="oddsboard">${items.map(([k, v]) => `<div class="odrow"><b>${k}</b><span>${String(k).split("-").map((x) => lane(+x)).join("")}</span><strong>${v}</strong></div>`).join("")}</div>` : `<div class="note">オッズはまだ未取得です。</div>`}</div>`;
+  const entries = Object.entries(odds)
+    .map(([combo, value]) => ({ combo, value: Number(value), parts: String(combo).split("-").map(Number) }))
+    .filter((x) => x.parts.length === 3 && x.parts.every((n) => n >= 1 && n <= 6) && Number.isFinite(x.value));
+  if (!entries.length) {
+    return `<div class="card"><h2>3連単オッズ</h2><div class="note">オッズはまだ未取得です。</div></div>`;
+  }
+
+  const sorted = [...entries].sort((a, b) => a.value - b.value);
+  const rankMap = new Map(sorted.map((x, i) => [x.combo, i + 1]));
+  const popular = sorted.slice(0, 6);
+  const cell = (a, b, c) => {
+    const combo = `${a}-${b}-${c}`;
+    const value = odds[combo];
+    if (value == null) return `<td class="odds-cell empty">-</td>`;
+    const rank = rankMap.get(combo);
+    const cls = rank === 1 ? "rank1" : rank === 2 ? "rank2" : rank <= 6 ? "rankHot" : "";
+    return `<td class="odds-cell ${cls}">
+      <span class="third">${c}</span>
+      <b>${value}</b>
+    </td>`;
+  };
+
+  const headBlocks = [1, 2, 3, 4, 5, 6].map((a) => {
+    const rows = [1, 2, 3, 4, 5, 6].filter((b) => b !== a).map((b) => {
+      const thirds = [1, 2, 3, 4, 5, 6].filter((c) => c !== a && c !== b);
+      return `<tr>
+        <th class="second">${b}</th>
+        ${thirds.map((c) => cell(a, b, c)).join("")}
+      </tr>`;
+    }).join("");
+    return `<section class="odds-head">
+      <div class="odds-head-title">
+        <div>${lane(a)}<strong>${a}号艇 1着</strong></div>
+        <span>${entries.filter((x) => x.parts[0] === a).length}点</span>
+      </div>
+      <div class="odds-scroll">
+        <table class="odds-table">
+          <thead><tr><th>2着</th><th colspan="4">3着候補 / オッズ</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </section>`;
+  }).join("");
+
+  return `<div class="card">
+    <h2>3連単オッズ</h2>
+    <div class="odds-summary">
+      ${popular.map((x, i) => `<div class="popular-odd ${i === 0 ? "rank1" : i === 1 ? "rank2" : ""}">
+        <span>${i + 1}人気</span><b>${x.combo}</b><strong>${x.value}</strong>
+      </div>`).join("")}
+    </div>
+    <div class="note odds-guide">各ブロックは「1着固定」。左が2着、横に3着候補とオッズを並べています。</div>
+    <div class="oddsboard grouped">${headBlocks}</div>
+  </div>`;
 }
 
 function finishBoat(n) {
