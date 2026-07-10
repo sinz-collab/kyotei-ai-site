@@ -5,6 +5,7 @@ let currentPayload = null;
 let currentRaceNo = 1;
 let currentPane = "entry";
 let ticketMode = "ai";
+let currentVenueSlug = "";
 
 const $ = (id) => document.getElementById(id);
 const safe = (v, fallback = "-") => (v === undefined || v === null || v === "" ? fallback : v);
@@ -90,10 +91,47 @@ async function init() {
     manifest = await fetchJson("manifest.json");
     $("syncState").textContent = "LIVE JSON";
     renderTop();
+    await restoreRoute();
   } catch (err) {
     $("syncState").textContent = "ERROR";
     $("venueGrid").innerHTML = `<div class="error">JSONを読み込めませんでした。<br>${err.message}<br><span class="note">config.js の KYOTEI_DATA_BASE を確認してください。</span></div>`;
   }
+}
+
+function routeState() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    view: params.get("view") || "",
+    venue: params.get("venue") || "",
+    race: Number(params.get("race") || 0),
+    pane: params.get("pane") || "",
+    ticket: params.get("ticket") || "",
+  };
+}
+
+function updateRoute(view = currentPayload ? "race" : "top", replace = false) {
+  const url = new URL(window.location.href);
+  url.search = "";
+  if (view === "race" && currentVenueSlug) {
+    url.searchParams.set("view", "race");
+    url.searchParams.set("venue", currentVenueSlug);
+    url.searchParams.set("race", String(currentRaceNo));
+    url.searchParams.set("pane", currentPane);
+    if (currentPane === "prediction") url.searchParams.set("ticket", ticketMode);
+  }
+  const method = replace ? "replaceState" : "pushState";
+  window.history[method]({}, "", url);
+}
+
+async function restoreRoute() {
+  const state = routeState();
+  if (state.view !== "race" || !state.venue) return;
+  await openVenue(state.venue, {
+    race: state.race,
+    pane: state.pane,
+    ticket: state.ticket,
+    replace: true,
+  });
 }
 
 function renderTop() {
@@ -108,24 +146,35 @@ function renderTop() {
   }).join("");
 }
 
-async function openVenue(slug) {
+async function openVenue(slug, opts = {}) {
   const v = manifest.venues.find((x) => x.slug === slug);
   if (!v) return;
   $("syncState").textContent = "FETCH";
   currentPayload = await fetchJson(v.dataPath || v.latestPath);
   currentPayload.venue = currentPayload.venue || v.name;
   currentPayload.date = currentPayload.date || v.date || manifest.date;
-  currentRaceNo = currentPayload.races?.[0]?.race || 1;
-  currentPane = "entry";
+  currentVenueSlug = slug;
+  const races = currentPayload.races || [];
+  currentRaceNo = races.some((r) => Number(r.race) === Number(opts.race))
+    ? Number(opts.race)
+    : currentPayload.races?.[0]?.race || 1;
+  currentPane = ["entry", "compare", "realtime", "tide", "prediction", "logs", "result", "odds"].includes(opts.pane)
+    ? opts.pane
+    : "entry";
+  ticketMode = ["ai", "aiUpset"].includes(opts.ticket) ? opts.ticket : "ai";
   $("syncState").textContent = "LIVE JSON";
-  showView("race");
+  showView("race", false);
   renderRace();
+  updateRoute("race", Boolean(opts.replace));
 }
 
-function showView(view) {
+function showView(view, syncRoute = true) {
   $("topView").hidden = view !== "top";
   $("raceView").hidden = view !== "race";
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  if (!syncRoute) return;
+  if (view === "top") updateRoute("top");
+  if (view === "race" && currentPayload) updateRoute("race");
 }
 
 function race() {
@@ -141,10 +190,29 @@ function renderRace() {
   $("venueTitle").textContent = `${currentPayload.venue || "-"} ${currentRaceNo}R`;
   $("venueMeta").textContent = `${currentPayload.date || ""} / 締切 ${r.deadline || "-"} / ${currentPayload.engine || ""}`;
   $("raceTabs").innerHTML = (currentPayload.races || []).map((x) =>
-    `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="currentRaceNo=${x.race};renderRace()">${x.race}R</button>`
+    `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="selectRace(${x.race})">${x.race}R</button>`
   ).join("");
   document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x.dataset.pane === currentPane));
   renderPane();
+}
+
+function selectRace(raceNo) {
+  currentRaceNo = Number(raceNo);
+  renderRace();
+  updateRoute("race");
+}
+
+function selectPane(pane) {
+  currentPane = pane;
+  document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x.dataset.pane === currentPane));
+  renderPane();
+  updateRoute("race");
+}
+
+function selectTicketMode(mode) {
+  ticketMode = mode;
+  renderPane();
+  updateRoute("race", true);
 }
 
 function renderPane() {
@@ -497,7 +565,7 @@ function renderPrediction() {
     <table><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th></tr>${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${pctInt(p.win?.[n])}</td><td>${pctInt(p.second?.[n])}</td><td>${pctInt(p.third?.[n])}</td></tr>`).join("")}</table>
   </div>
   <div class="card"><h2>買い目</h2>
-    <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">AI予想</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">AI荒れ予想</button></div>
+    <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">AI予想</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">AI荒れ予想</button></div>
     ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">買い目はまだありません。</div>`}
   </div>`;
 }
@@ -587,11 +655,16 @@ function finishBoat(n) {
 }
 
 document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => showView(b.dataset.view));
-document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => {
-  currentPane = b.dataset.pane;
-  document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x === b));
-  renderPane();
-});
+document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => selectPane(b.dataset.pane));
 $("backTop").onclick = () => showView("top");
+
+window.addEventListener("popstate", () => {
+  const state = routeState();
+  if (state.view === "race" && state.venue) {
+    openVenue(state.venue, state);
+  } else {
+    showView("top", false);
+  }
+});
 
 init();
