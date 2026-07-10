@@ -1,4 +1,4 @@
-const DATA_BASE = (window.KYOTEI_DATA_BASE || "./data").replace(/\/$/, "");
+let DATA_BASE = (window.KYOTEI_DATA_BASE || "./data").replace(/\/$/, "");
 
 let manifest = null;
 let currentPayload = null;
@@ -21,6 +21,17 @@ const pctInt = (v) => {
 
 function dataUrl(path) {
   return `${DATA_BASE}/${String(path).replace(/^\//, "")}?t=${Date.now()}`;
+}
+
+async function resolveDataBase() {
+  const m = DATA_BASE.match(/^https:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/main\/data$/);
+  if (!m) return;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${m[1]}/${m[2]}/commits/main?t=${Date.now()}`, { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data?.sha) DATA_BASE = `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${data.sha}/data`;
+  } catch (_) {}
 }
 
 function lane(n) {
@@ -75,6 +86,7 @@ async function fetchJson(path) {
 async function init() {
   try {
     $("syncState").textContent = "LOADING";
+    await resolveDataBase();
     manifest = await fetchJson("manifest.json");
     $("syncState").textContent = "LIVE JSON";
     renderTop();
