@@ -400,7 +400,7 @@ function renderSlit(realtime) {
   return `<h3>スリット隊形 ${changed ? '<span class="note">進入変更あり</span>' : ""}</h3>
     <div class="slit">${order.map((n, i) => `<div class="slit-row" style="top:${22 + i * 34}px">
       <div class="slit-lane">${lane(n)}<small>${last[n]?.start_course || last[n]?.course ? safe(last[n]?.start_course || last[n]?.course) + "コース" : ""}</small></div>
-      <div class="boatmark" style="left:calc(${pos(n)}% - 17px);background:${boatColor(n)};color:${n === 1 || n === 5 ? "#111" : "#fff"}">${n}</div>
+      <div class="boatmark" style="left:calc(${pos(n)}% - 14px);background:${boatColor(n)};color:${n === 1 || n === 5 ? "#111" : "#fff"}">${n}</div>
       <div class="slit-st ${String(last[n]?.st_raw || last[n]?.st || "").startsWith("F") ? "f" : ""}">${safe(last[n]?.st_raw || last[n]?.st || last[n]?.ST)}</div>
     </div>`).join("")}</div>`;
 }
