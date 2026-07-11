@@ -20,6 +20,17 @@ const pctInt = (v) => {
   return Number.isFinite(n) ? `${Math.round(n)}%` : "-";
 };
 
+function windDisplay(weather = {}) {
+  const speed = safe(weather.wind || weather.windSpeed || weather["風速"], "");
+  const dirRaw = safe(weather.wind_dir || weather.windDirection || weather["風向"], "");
+  const dirNum = Number(String(dirRaw).replace(/[^\d.\-]/g, ""));
+  const arrows = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"];
+  const arrow = Number.isFinite(dirNum) ? arrows[Math.round(((dirNum % 16) / 2)) % 8] : "";
+  const dir = arrow || dirRaw;
+  if (!speed && !dir) return "-";
+  return [dir, speed].filter(Boolean).join(" ");
+}
+
 function dataUrl(path) {
   return `${DATA_BASE}/${String(path).replace(/^\//, "")}?t=${Date.now()}`;
 }
@@ -491,10 +502,11 @@ function renderRealtime() {
   const last = rowMap(rt.last || rt.lastMinute || rt.before || rt.direct);
   const original = rowMap(rt.original || rt.originalExhibition || rt.sum || rt.display);
   const weather = rt.weather || {};
+  const wind = windDisplay(weather);
   const hasLast = Object.keys(last).length > 0;
   const hasOriginal = Object.keys(original).length > 0;
   return `<div class="card"><h2>直前情報</h2>
-      <div class="note">天候 ${safe(weather.weather)} / 風速 ${safe(weather.wind || weather.windSpeed)}m / 波 ${safe(weather.wave || weather.waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
+      <div class="note">天候 ${safe(weather.weather || weather["天候"])} / 風 ${wind} / 波 ${safe(weather.wave || weather.waveHeight || weather["波高"])} / 水温 ${safe(weather.water || weather.waterTemp || weather["水温"])}</div>
       ${hasLast ? `<table><tr><th>枠</th><th>展示</th><th>ST</th><th>チルト</th><th>部品</th></tr>
         ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(last[n]?.time || last[n]?.displayTime, valueRankClass(last, n, last[n]?.time ? "time" : "displayTime"))}</td><td>${safe(last[n]?.st_raw || last[n]?.st || last[n]?.ST)}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
       </table>` : `<div class="note">直前情報はまだ未取得です。</div>`}
@@ -506,10 +518,9 @@ function renderRealtime() {
     </div>
     <div class="card"><h2>水面気象</h2>
       <div class="stats">
-        <div class="stat"><span>天候</span><b>${safe(weather.weather)}</b></div>
-        <div class="stat"><span>風速</span><b>${safe(weather.wind || weather.windSpeed)}</b></div>
-        <div class="stat"><span>風向</span><b>${safe(weather.windDirection)}</b></div>
-        <div class="stat"><span>波高</span><b>${safe(weather.wave || weather.waveHeight)}</b></div>
+        <div class="stat"><span>天候</span><b>${safe(weather.weather || weather["天候"])}</b></div>
+        <div class="stat"><span>風向・風速</span><b>${wind}</b></div>
+        <div class="stat"><span>波高</span><b>${safe(weather.wave || weather.waveHeight || weather["波高"])}</b></div>
       </div>
       <div class="note">データが取得済みになると、このタブに自動で反映されます。</div>
     </div>`;
