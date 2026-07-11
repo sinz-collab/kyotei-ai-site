@@ -6,6 +6,7 @@ let currentRaceNo = 1;
 let currentPane = "entry";
 let ticketMode = "ai";
 let currentVenueSlug = "";
+let racerPhotos = {};
 
 const $ = (id) => document.getElementById(id);
 const safe = (v, fallback = "-") => (v === undefined || v === null || v === "" ? fallback : v);
@@ -33,6 +34,13 @@ function windDisplay(weather = {}) {
 
 function dataUrl(path) {
   return `${DATA_BASE}/${String(path).replace(/^\//, "")}?t=${Date.now()}`;
+}
+
+function assetUrl(path) {
+  const value = String(path || "");
+  if (!value) return "";
+  if (/^https?:\/\//.test(value)) return value;
+  return `${DATA_BASE}/${value.replace(/^\//, "")}`;
 }
 
 async function resolveDataBase() {
@@ -89,16 +97,52 @@ function boatColor(n) {
   }[Number(n)] || "#64748b";
 }
 
+function racerPhotoRecord(b = {}) {
+  const photos = racerPhotos.photos || racerPhotos.byName || racerPhotos;
+  const byId = racerPhotos.byId || {};
+  const ids = [b.reg_no, b.register_no, b.player_id, b.id].filter(Boolean).map(String);
+  for (const id of ids) {
+    if (byId[id]) return byId[id];
+    if (photos[id]) return photos[id];
+  }
+  const names = [b.name_norm, b.name].filter(Boolean).map((x) => String(x).replace(/\s+/g, ""));
+  for (const name of names) {
+    if (photos[name]) return photos[name];
+  }
+  return null;
+}
+
+function racerPhoto(b = {}) {
+  const record = racerPhotoRecord(b);
+  const photo = typeof record === "string" ? record : record?.photo || record?.url || b.photo || b.photoUrl;
+  const label = String(b.name_norm || b.name || "?").replace(/\s+/g, "").slice(0, 1) || "?";
+  if (photo) {
+    return `<div class="racer-photo"><img src="${assetUrl(photo)}" alt="${safe(b.name, "選手")}"></div>`;
+  }
+  return `<div class="racer-photo placeholder" aria-label="写真未登録">${label}</div>`;
+}
+
 async function fetchJson(path) {
   const res = await fetch(dataUrl(path), { cache: "no-store" });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${path}`);
   return await res.json();
 }
 
+async function fetchOptionalJson(path, fallback = {}) {
+  try {
+    const res = await fetch(dataUrl(path), { cache: "no-store" });
+    if (!res.ok) return fallback;
+    return await res.json();
+  } catch (_) {
+    return fallback;
+  }
+}
+
 async function init() {
   try {
     $("syncState").textContent = "LOADING";
     await resolveDataBase();
+    racerPhotos = await fetchOptionalJson("racers/racers.json", {});
     manifest = await fetchJson("manifest.json");
     $("syncState").textContent = "LIVE JSON";
     renderTop();
@@ -310,7 +354,7 @@ function courseSummary(b) {
 function renderEntry() {
   const r = race();
   return `<div class="card"><h2>${r.race}R 締切 ${safe(r.deadline)} <span class="note">${safe(r.type, "")}</span></h2>
-  ${(r.racers || []).map((b) => `<div class="boat">${lane(b.lane)}<div>
+  ${(r.racers || []).map((b) => `<div class="boat">${lane(b.lane)}${racerPhoto(b)}<div>
     <div class="name">${safe(b.name)}${b.female ? " 💗" : ""}<span class="${gradeClass(b.class)}">${safe(b.class, "")}</span>${fBadge(b)}</div>
     <div class="sub">${safe(b.age)}歳 / ${safe(b.weight)}kg　${safe(b.branch)}支部 / ${safe(b.home)}出身 / ${safe(b.f, "")}</div>
     <div class="stats">
