@@ -272,10 +272,19 @@ function normalizeSeasonGroups(b) {
   return groups;
 }
 
+function seasonCourse(run) {
+  return safe(run?.course || run?.entry_course || run?.frame || run?.lane);
+}
+
+function seasonCourseLabel(run) {
+  const course = seasonCourse(run);
+  return course === "-" ? "コース-" : `${course}C`;
+}
+
 function seasonRunCard(run) {
   if (!run) return `<div class="season-run-card empty"><div class="meta">-</div><div class="finish">-</div></div>`;
   return `<div class="season-run-card ${finishClass(run.finish)}">
-    <div class="meta"><b>${safe(run.race)}</b> / ${safe(run.frame)}枠<br>ST ${safe(run.st)}</div>
+    <div class="meta"><b>${safe(run.race)}</b> / ${seasonCourseLabel(run)}<br>ST ${safe(run.st)}</div>
     <div class="finish">${safe(run.finish)}</div>
   </div>`;
 }
@@ -380,20 +389,26 @@ function seasonScore(b) {
 }
 
 function seasonCompareInfo(b) {
-  const runs = normalizeSeasonGroups(b).flatMap((g) => g.runs || []);
+  const groups = normalizeSeasonGroups(b);
+  const runs = groups.flatMap((g) => g.runs || []);
   if (!runs.length) return { score: 0, main: "-", sub: "節間なし" };
   let top3 = 0, stSum = 0, stCnt = 0;
-  const chips = runs.slice(-5).map((run) => {
+  for (const run of runs) {
     if (/^[123]/.test(String(run.finish || ""))) top3++;
     const st = num(run.st, NaN);
     if (Number.isFinite(st)) {
       stSum += st;
       stCnt++;
     }
-    return `<span class="cs-fin ${finishClass(run.finish)}" title="${safe(run.race)} ${safe(run.frame)}枠 ST${safe(run.st)}">${safe(run.finish)}</span>`;
-  }).join("");
+  }
+  const board = groups.map((g) => `<div class="cs-day">
+    <div class="cs-day-label">${safe(g.day)}</div>
+    <div class="cs-runs">${(g.runs || []).map((run) => `<span class="cs-run ${finishClass(run.finish)}" title="${safe(g.day)} ${safe(run.race)} ${seasonCourseLabel(run)} ST${safe(run.st)} ${safe(run.finish)}">
+      <span>${safe(run.race)}</span><b>${seasonCourseLabel(run)}</b><strong>${safe(run.finish)}</strong><em>ST ${safe(run.st)}</em>
+    </span>`).join("") || `<span class="cs-run empty">-</span>`}</div>
+  </div>`).join("");
   const avg = stCnt ? "." + String(Math.round((stSum / stCnt) * 100)).padStart(2, "0") : "-";
-  return { score: seasonScore(b), main: `<span class="compare-season">${chips}</span>`, sub: `3内 ${top3}/${runs.length}・平均ST ${avg}` };
+  return { score: seasonScore(b), main: `<div class="compare-season-board">${board}</div>`, sub: `3内 ${top3}/${runs.length}・平均ST ${avg}` };
 }
 
 function compareMark(score) {
@@ -408,7 +423,7 @@ function compareRank(rows, key, laneNo) {
 
 function compareCell(rows, row, key) {
   const c = row[key], cls = compareRank(rows, key, row.lane);
-  return `<td><div class="compare-cell ${cls}"><span class="compare-main">${c.main}</span><span class="compare-sub">${c.sub}</span></div></td>`;
+  return `<td><div class="compare-cell ${cls}"><div class="compare-main">${c.main}</div><div class="compare-sub">${c.sub}</div></div></td>`;
 }
 
 function renderCompare() {

@@ -55,7 +55,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 .coursebox{margin-top:8px;padding:9px 10px;border-radius:12px;background:#f8fafc;border:1px solid var(--line);font-size:12px;line-height:1.5}
 .coursebox b{font-size:14px}.coursebox .good{color:#0f766e}.coursebox .bad{color:#dc2626}.coursebox .normal{color:#475569}
 .compare-wrap{overflow-x:auto;margin-top:8px;border:1px solid var(--line);border-radius:14px;background:#fff}
-.compare-table{min-width:780px;border-collapse:separate;border-spacing:0}
+.compare-table{min-width:980px;border-collapse:separate;border-spacing:0}
 .compare-table th,.compare-table td{padding:8px 6px;border-bottom:1px solid #edf2f7;border-right:1px solid #edf2f7;vertical-align:middle}
 .compare-table th:first-child,.compare-table td:first-child{position:sticky;left:0;background:#fff;z-index:2;text-align:left;min-width:112px}
 .compare-table th:first-child{background:#f8fafc;z-index:3}
@@ -63,6 +63,12 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 .compare-cell.rank1{background:#fff0ea;color:#7c2d12}.compare-cell.rank2{background:#fff8c7;color:#713f12}
 .compare-main{font-size:13px}.compare-sub{display:block;margin-top:2px;font-size:10px;color:#64748b;font-weight:800}
 .compare-season{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;margin-top:2px}.cs-fin{display:inline-grid;place-items:center;min-width:24px;height:24px;border-radius:8px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:950}.cs-fin.good{background:#fee2e2;color:#b91c1c}.cs-fin.mid{background:#dbeafe;color:#1d4ed8}.cs-fin.bad{background:#e5e7eb;color:#475569}.cs-fin.trouble{background:#111827;color:#fff}
+.compare-season-board{display:flex;gap:5px;align-items:stretch;justify-content:flex-start;min-width:280px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+.cs-day{display:grid;grid-template-rows:auto 1fr;gap:3px;min-width:64px}
+.cs-day-label{border-radius:8px;background:#0f2742;color:#fff;font-size:10px;font-weight:950;line-height:1;text-align:center;padding:5px 3px}
+.cs-runs{display:grid;grid-template-columns:repeat(2,minmax(34px,1fr));gap:3px}
+.cs-run{display:grid;grid-template-rows:auto auto auto auto;place-items:center;min-width:34px;border:1px solid #dbe3ec;border-radius:8px;background:#f8fafc;color:#334155;font-size:9px;font-weight:900;line-height:1.1;padding:4px 2px}
+.cs-run b{font-size:10px}.cs-run strong{font-size:12px}.cs-run em{font-style:normal;font-size:8px;color:#64748b}.cs-run.good{background:#fee2e2;color:#b91c1c;border-color:#fecaca}.cs-run.mid{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}.cs-run.bad{background:#e5e7eb;color:#475569;border-color:#d1d5db}.cs-run.trouble{background:#111827;color:#fff;border-color:#111827}.cs-run.empty{color:#94a3b8;background:#f8fafc}
 .time-badge{display:inline-flex;align-items:center;justify-content:center;min-width:46px;padding:4px 10px;border-radius:999px;font-weight:950}
 .time-badge.rank1{background:#ffd9cc;color:#7c2d12}.time-badge.rank2{background:#fff1a8;color:#713f12}
 .slit{position:relative;height:236px;margin-top:10px;border-radius:18px;background:linear-gradient(135deg,#e9f7ff,#f8fbff);border:1px solid #dbe7f3;overflow:hidden}
