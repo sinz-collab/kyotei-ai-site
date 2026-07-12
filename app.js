@@ -262,6 +262,40 @@ function finishClass(finish) {
   return "";
 }
 
+function parsePayloadDate(value) {
+  const s = String(value || "").trim().replaceAll("/", "-");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const d = new Date(`${s}T00:00:00+09:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function addDays(date, days) {
+  const d = new Date(date.getTime());
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function shortDateLabel(date) {
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function groupDayNumber(group, index) {
+  const label = String(group?.day || "");
+  if (label.includes("初日")) return 1;
+  const n = Number(label.match(/\d+/)?.[0]);
+  return Number.isFinite(n) && n > 0 ? n : index + 1;
+}
+
+function seasonDayLabel(group, index, groups) {
+  const base = safe(group?.day || `${index + 1}日目`);
+  if (group?.date) return `${base} ${group.date}`;
+  const payloadDate = parsePayloadDate(currentPayload?.date || manifest?.date);
+  if (!payloadDate) return base;
+  const currentDay = Number(race()?.eventDay || currentPayload?.eventDay || 0) || (groups?.length || 0) + 1;
+  const dayNo = groupDayNumber(group, index);
+  const date = addDays(payloadDate, dayNo - currentDay);
+  return `${base} ${shortDateLabel(date)}`;
+}
 function normalizeSeasonGroups(b) {
   if (Array.isArray(b.season_groups) && b.season_groups.length) return b.season_groups;
   const runs = Array.isArray(b.season_runs) ? b.season_runs : [];
@@ -293,7 +327,7 @@ function seasonBoard(b) {
   const groups = normalizeSeasonGroups(b);
   if (!groups.length) return `<div class="note">節間成績なし</div>`;
   return `<div class="season-board">${groups.map((g) => `<div class="season-day-row">
-    <div class="season-day-head">${safe(g.day)}</div>
+    <div class="season-day-head">${seasonDayLabel(g, groups.indexOf(g), groups)}</div>
     ${seasonRunCard((g.runs || [])[0])}
     ${seasonRunCard((g.runs || [])[1])}
   </div>`).join("")}</div>`;
@@ -402,8 +436,8 @@ function seasonCompareInfo(b) {
     }
   }
   const board = groups.map((g) => `<div class="cs-day">
-    <div class="cs-day-label">${safe(g.day)}</div>
-    <div class="cs-runs">${(g.runs || []).map((run) => `<span class="cs-run ${finishClass(run.finish)}" title="${safe(g.day)} ${safe(run.race)} ${seasonCourseLabel(run)} ST${safe(run.st)} ${safe(run.finish)}">
+    <div class="cs-day-label">${seasonDayLabel(g, groups.indexOf(g), groups)}</div>
+    <div class="cs-runs">${(g.runs || []).map((run) => `<span class="cs-run ${finishClass(run.finish)}" title="${seasonDayLabel(g, groups.indexOf(g), groups)} ${safe(run.race)} ${seasonCourseLabel(run)} ST${safe(run.st)} ${safe(run.finish)}">
       <span>${safe(run.race)}</span><b>${seasonCourseLabel(run)}</b><strong>${safe(run.finish)}</strong><em>ST ${safe(run.st)}</em>
     </span>`).join("") || `<span class="cs-run empty">-</span>`}</div>
   </div>`).join("");
