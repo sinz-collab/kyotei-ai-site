@@ -583,10 +583,50 @@ function renderResult() {
   </div>`;
 }
 
+function oddsBoat(n) {
+  const cls = {1:"one",2:"two",3:"three",4:"four",5:"five",6:"six"}[Number(n)] || "";
+  return `<span class="odds-boat ${cls}">${n}</span>`;
+}
+
+function oddsClass(value) {
+  const n = Number(String(value || "").replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(n)) return "";
+  if (n <= 10) return "hot";
+  if (n <= 30) return "warm";
+  return "";
+}
+
 function renderOdds() {
   const odds = pred().odds || {};
-  const items = Object.entries(odds).slice(0, 120);
-  return `<div class="card"><h2>3連単オッズ</h2>${items.length ? `<div class="oddsboard">${items.map(([k, v]) => `<div class="odrow"><b>${k}</b><span>${String(k).split("-").map((x) => lane(+x)).join("")}</span><strong>${v}</strong></div>`).join("")}</div>` : `<div class="note">オッズはまだ未取得です。</div>`}</div>`;
+  const entries = Object.entries(odds)
+    .map(([key, value]) => ({ key, value, parts: String(key).split("-").map(Number) }))
+    .filter((x) => x.parts.length === 3 && x.parts.every((n) => n >= 1 && n <= 6));
+  if (!entries.length) return `<div class="card"><h2>3連単オッズ</h2><div class="note">オッズはまだ未取得です。</div></div>`;
+
+  const getOdd = (a, b, c) => {
+    const found = odds[`${a}-${b}-${c}`] ?? odds[`${a}${b}${c}`];
+    return found === undefined || found === null || found === "" ? "-" : found;
+  };
+  const panels = [1,2,3,4,5,6].map((first) => {
+    const seconds = [1,2,3,4,5,6].filter((n) => n !== first);
+    return `<section class="odds-panel">
+      <h3>${oddsBoat(first)}<span>1着固定</span></h3>
+      <table class="odds-table">
+        <tr><th>2着</th><th>3着候補</th></tr>
+        ${seconds.map((second) => {
+          const thirds = [1,2,3,4,5,6].filter((n) => n !== first && n !== second);
+          return `<tr>
+            <td class="odds-second">${oddsBoat(second)}</td>
+            <td><div class="odds-cells">${thirds.map((third) => {
+              const value = getOdd(first, second, third);
+              return `<div class="odds-cell ${oddsClass(value)}">${oddsBoat(third)}<b>${safe(value)}</b></div>`;
+            }).join("")}</div></td>
+          </tr>`;
+        }).join("")}
+      </table>
+    </section>`;
+  }).join("");
+  return `<div class="card odds-card"><h2>3連単オッズ</h2><div class="odds-note">1着固定で、2着ごとの3着候補を横に並べています。</div><div class="oddsboard">${panels}</div></div>`;
 }
 
 function finishBoat(n) {
