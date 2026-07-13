@@ -1,11 +1,13 @@
-let DATA_BASE = (window.KYOTEI_DATA_BASE || "./data").replace(/\/$/, "");
+const DATA_BASES = (Array.isArray(window.KYOTEI_DATA_BASES) && window.KYOTEI_DATA_BASES.length
+  ? window.KYOTEI_DATA_BASES
+  : [window.KYOTEI_DATA_BASE || "./data"]
+).map((base) => String(base).replace(/\/$/, ""));
 
 let manifest = null;
 let currentPayload = null;
 let currentRaceNo = 1;
 let currentPane = "entry";
 let ticketMode = "ai";
-let currentVenueSlug = "";
 
 const $ = (id) => document.getElementById(id);
 const safe = (v, fallback = "-") => (v === undefined || v === null || v === "" ? fallback : v);
@@ -20,30 +22,9 @@ const pctInt = (v) => {
   return Number.isFinite(n) ? `${Math.round(n)}%` : "-";
 };
 
-function windDisplay(weather = {}) {
-  const speed = safe(weather.wind || weather.windSpeed || weather["風速"], "");
-  const dirRaw = safe(weather.wind_dir || weather.windDirection || weather["風向"], "");
-  const dirNum = Number(String(dirRaw).replace(/[^\d.\-]/g, ""));
-  const arrows = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"];
-  const arrow = Number.isFinite(dirNum) ? arrows[Math.round(((dirNum % 16) / 2)) % 8] : "";
-  const dir = arrow || dirRaw;
-  if (!speed && !dir) return "-";
-  return [dir, speed].filter(Boolean).join(" ");
-}
-
-function dataUrl(path) {
-  return `${DATA_BASE}/${String(path).replace(/^\//, "")}?t=${Date.now()}`;
-}
-
-async function resolveDataBase() {
-  const m = DATA_BASE.match(/^https:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/main\/data$/);
-  if (!m) return;
-  try {
-    const res = await fetch(`https://api.github.com/repos/${m[1]}/${m[2]}/commits/main?t=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (data?.sha) DATA_BASE = `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${data.sha}/data`;
-  } catch (_) {}
+function dataUrls(path) {
+  const cleanPath = String(path).replace(/^\//, "");
+  return DATA_BASES.map((base) => `${base}/${cleanPath}?t=${Date.now()}`);
 }
 
 function lane(n) {
@@ -90,59 +71,32 @@ function boatColor(n) {
 }
 
 async function fetchJson(path) {
-  const res = await fetch(dataUrl(path), { cache: "no-store" });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${path}`);
-  return await res.json();
+  let lastError = null;
+  for (const url of dataUrls(path)) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        lastError = new Error(`${res.status} ${res.statusText}: ${path}`);
+        continue;
+      }
+      return await res.json();
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error(`failed to load ${path}`);
 }
 
 async function init() {
   try {
     $("syncState").textContent = "LOADING";
-    await resolveDataBase();
     manifest = await fetchJson("manifest.json");
     $("syncState").textContent = "LIVE JSON";
     renderTop();
-    await restoreRoute();
   } catch (err) {
     $("syncState").textContent = "ERROR";
     $("venueGrid").innerHTML = `<div class="error">JSONを読み込めませんでした。<br>${err.message}<br><span class="note">config.js の KYOTEI_DATA_BASE を確認してください。</span></div>`;
   }
-}
-
-function routeState() {
-  const params = new URLSearchParams(window.location.search);
-  return {
-    view: params.get("view") || "",
-    venue: params.get("venue") || "",
-    race: Number(params.get("race") || 0),
-    pane: params.get("pane") || "",
-    ticket: params.get("ticket") || "",
-  };
-}
-
-function updateRoute(view = currentPayload ? "race" : "top", replace = false) {
-  const url = new URL(window.location.href);
-  url.search = "";
-  if (view === "race" && currentVenueSlug) {
-    url.searchParams.set("view", "race");
-    url.searchParams.set("venue", currentVenueSlug);
-    url.searchParams.set("race", String(currentRaceNo));
-    url.searchParams.set("pane", currentPane);
-    if (currentPane === "prediction") url.searchParams.set("ticket", ticketMode);
-  }
-  const method = replace ? "replaceState" : "pushState";
-  window.history[method]({}, "", url);
-}
-
-async function restoreRoute() {
-  const state = routeState();
-  if (state.view !== "race" || !state.venue) return;
-  await openVenue(state.venue, {
-    race: state.race,
-    pane: state.pane,
-    ticket: state.ticket,
-    replace: true,
-  });
 }
 
 function renderTop() {
@@ -162,35 +116,24 @@ function renderTop() {
   }).join("");
 }
 
-async function openVenue(slug, opts = {}) {
+async function openVenue(slug) {
   const v = manifest.venues.find((x) => x.slug === slug);
   if (!v) return;
   $("syncState").textContent = "FETCH";
   currentPayload = await fetchJson(v.dataPath || v.latestPath);
   currentPayload.venue = currentPayload.venue || v.name;
   currentPayload.date = currentPayload.date || v.date || manifest.date;
-  currentVenueSlug = slug;
-  const races = currentPayload.races || [];
-  currentRaceNo = races.some((r) => Number(r.race) === Number(opts.race))
-    ? Number(opts.race)
-    : currentPayload.races?.[0]?.race || 1;
-  currentPane = ["entry", "compare", "realtime", "tide", "prediction", "logs", "result", "odds"].includes(opts.pane)
-    ? opts.pane
-    : "entry";
-  ticketMode = ["ai", "aiUpset"].includes(opts.ticket) ? opts.ticket : "ai";
+  currentRaceNo = currentPayload.races?.[0]?.race || 1;
+  currentPane = "entry";
   $("syncState").textContent = "LIVE JSON";
-  showView("race", false);
+  showView("race");
   renderRace();
-  updateRoute("race", Boolean(opts.replace));
 }
 
-function showView(view, syncRoute = true) {
+function showView(view) {
   $("topView").hidden = view !== "top";
   $("raceView").hidden = view !== "race";
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
-  if (!syncRoute) return;
-  if (view === "top") updateRoute("top");
-  if (view === "race" && currentPayload) updateRoute("race");
 }
 
 function race() {
@@ -206,29 +149,10 @@ function renderRace() {
   $("venueTitle").textContent = `${currentPayload.venue || "-"} ${currentRaceNo}R`;
   $("venueMeta").textContent = `${currentPayload.date || ""} / 締切 ${r.deadline || "-"} / ${currentPayload.engine || ""}`;
   $("raceTabs").innerHTML = (currentPayload.races || []).map((x) =>
-    `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="selectRace(${x.race})">${x.race}R</button>`
+    `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="currentRaceNo=${x.race};renderRace()">${x.race}R</button>`
   ).join("");
   document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x.dataset.pane === currentPane));
   renderPane();
-}
-
-function selectRace(raceNo) {
-  currentRaceNo = Number(raceNo);
-  renderRace();
-  updateRoute("race");
-}
-
-function selectPane(pane) {
-  currentPane = pane;
-  document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x.dataset.pane === currentPane));
-  renderPane();
-  updateRoute("race");
-}
-
-function selectTicketMode(mode) {
-  ticketMode = mode;
-  renderPane();
-  updateRoute("race", true);
 }
 
 function renderPane() {
@@ -545,7 +469,7 @@ function renderSlit(realtime) {
   return `<h3>スリット隊形 ${changed ? '<span class="note">進入変更あり</span>' : ""}</h3>
     <div class="slit">${order.map((n, i) => `<div class="slit-row" style="top:${22 + i * 34}px">
       <div class="slit-lane">${lane(n)}<small>${last[n]?.start_course || last[n]?.course ? safe(last[n]?.start_course || last[n]?.course) + "コース" : ""}</small></div>
-      <div class="boatmark" style="left:calc(${pos(n)}% - 14px);background:${boatColor(n)};color:${n === 1 || n === 5 ? "#111" : "#fff"}">${n}</div>
+      <div class="boatmark" style="left:calc(${pos(n)}% - 17px);background:${boatColor(n)};color:${n === 1 || n === 5 ? "#111" : "#fff"}">${n}</div>
       <div class="slit-st ${String(last[n]?.st_raw || last[n]?.st || "").startsWith("F") ? "f" : ""}">${safe(last[n]?.st_raw || last[n]?.st || last[n]?.ST)}</div>
     </div>`).join("")}</div>`;
 }
@@ -556,11 +480,13 @@ function renderRealtime() {
   const last = rowMap(rt.last || rt.lastMinute || rt.before || rt.direct);
   const original = rowMap(rt.original || rt.originalExhibition || rt.sum || rt.display);
   const weather = rt.weather || {};
-  const wind = windDisplay(weather);
+  const windDirection = weather.windDirection || weather.windDir || weather.wind_dir || weather.wind_direction;
+  const windSpeed = weather.wind || weather.windSpeed || weather.wind_speed;
+  const waveHeight = weather.wave || weather.waveHeight || weather.wave_height;
   const hasLast = Object.keys(last).length > 0;
   const hasOriginal = Object.keys(original).length > 0;
   return `<div class="card"><h2>直前情報</h2>
-      <div class="note">天候 ${safe(weather.weather || weather["天候"])} / 風 ${wind} / 波 ${safe(weather.wave || weather.waveHeight || weather["波高"])} / 水温 ${safe(weather.water || weather.waterTemp || weather["水温"])}</div>
+      <div class="note">天候 ${safe(weather.weather)} / 風向 ${safe(windDirection)} / 風速 ${safe(windSpeed)}m / 波 ${safe(waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
       ${hasLast ? `<table><tr><th>枠</th><th>展示</th><th>ST</th><th>チルト</th><th>部品</th></tr>
         ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(last[n]?.time || last[n]?.displayTime, valueRankClass(last, n, last[n]?.time ? "time" : "displayTime"))}</td><td>${safe(last[n]?.st_raw || last[n]?.st || last[n]?.ST)}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
       </table>` : `<div class="note">直前情報はまだ未取得です。</div>`}
@@ -572,9 +498,10 @@ function renderRealtime() {
     </div>
     <div class="card"><h2>水面気象</h2>
       <div class="stats">
-        <div class="stat"><span>天候</span><b>${safe(weather.weather || weather["天候"])}</b></div>
-        <div class="stat"><span>風向・風速</span><b>${wind}</b></div>
-        <div class="stat"><span>波高</span><b>${safe(weather.wave || weather.waveHeight || weather["波高"])}</b></div>
+        <div class="stat"><span>天候</span><b>${safe(weather.weather)}</b></div>
+        <div class="stat"><span>風向</span><b>${safe(windDirection)}</b></div>
+        <div class="stat"><span>風速</span><b>${safe(windSpeed)}</b></div>
+        <div class="stat"><span>波高</span><b>${safe(waveHeight)}</b></div>
       </div>
       <div class="note">データが取得済みになると、このタブに自動で反映されます。</div>
     </div>`;
@@ -630,7 +557,7 @@ function renderPrediction() {
     <table><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th></tr>${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${pctInt(p.win?.[n])}</td><td>${pctInt(p.second?.[n])}</td><td>${pctInt(p.third?.[n])}</td></tr>`).join("")}</table>
   </div>
   <div class="card"><h2>買い目</h2>
-    <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">AI予想</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">AI荒れ予想</button></div>
+    <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">AI予想</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">AI荒れ予想</button></div>
     ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">買い目はまだありません。</div>`}
   </div>`;
 }
@@ -649,7 +576,7 @@ function renderResult() {
   const order = String(r.order || "").split("-").filter(Boolean);
   return `<div class="card result-main"><h2>レース結果</h2>
     <div class="stage ${r.status === "ok" ? "green" : "yellow"}"><div><b>${r.status === "ok" ? "結果取得済み" : "結果待ち"}</b><br>${r.message || ""}</div><span>${r.status === "ok" ? "確定" : "待機"}</span></div>
-    ${r.order ? `<div class="result-line"><div class="result-label">3連単 着順</div><div class="finish-row">${order.map((n, i) => `${i ? '<span class="finish-arrow">→</span>' : ""}${finishBoat(n)}`).join("")}</div></div>
+    ${r.order ? `<div class="result-line"><div class="result-label">3連単 着順</div><div class="finish-row">${order.map((n, i) => `${i ? '<span class="finish-arrow" aria-hidden="true"></span>' : ""}${finishBoat(n)}`).join("")}</div></div>
       <div class="result-pay"><div class="paybox"><span>払戻</span><b>${safe(r.payout3t)}</b></div><div class="paybox"><span>人気</span><b>${safe(r.popularity3t)}</b></div></div>` :
       `<div class="result-line"><div class="result-label">結果待ち</div><div class="note">締切9分後から結果取得を試します。</div></div>`}
     <div class="result-sub"><div class="paybox"><span>決まり手</span><b>${safe(r.kimarite)}</b></div><div class="paybox"><span>AI予想</span><b>${hitAi ? "的中" : "-"}</b></div><div class="paybox"><span>AI荒れ</span><b>${hitUpset ? "的中" : "-"}</b></div></div>
@@ -658,60 +585,8 @@ function renderResult() {
 
 function renderOdds() {
   const odds = pred().odds || {};
-  const entries = Object.entries(odds)
-    .map(([combo, value]) => ({ combo, value: Number(value), parts: String(combo).split("-").map(Number) }))
-    .filter((x) => x.parts.length === 3 && x.parts.every((n) => n >= 1 && n <= 6) && Number.isFinite(x.value));
-  if (!entries.length) {
-    return `<div class="card"><h2>3連単オッズ</h2><div class="note">オッズはまだ未取得です。</div></div>`;
-  }
-
-  const sorted = [...entries].sort((a, b) => a.value - b.value);
-  const rankMap = new Map(sorted.map((x, i) => [x.combo, i + 1]));
-  const popular = sorted.slice(0, 6);
-  const cell = (a, b, c) => {
-    const combo = `${a}-${b}-${c}`;
-    const value = odds[combo];
-    if (value == null) return `<td class="odds-cell empty">-</td>`;
-    const rank = rankMap.get(combo);
-    const cls = rank === 1 ? "rank1" : rank === 2 ? "rank2" : rank <= 6 ? "rankHot" : "";
-    return `<td class="odds-cell ${cls}">
-      <span class="third">${c}</span>
-      <b>${value}</b>
-    </td>`;
-  };
-
-  const headBlocks = [1, 2, 3, 4, 5, 6].map((a) => {
-    const rows = [1, 2, 3, 4, 5, 6].filter((b) => b !== a).map((b) => {
-      const thirds = [1, 2, 3, 4, 5, 6].filter((c) => c !== a && c !== b);
-      return `<tr>
-        <th class="second">${b}</th>
-        ${thirds.map((c) => cell(a, b, c)).join("")}
-      </tr>`;
-    }).join("");
-    return `<section class="odds-head">
-      <div class="odds-head-title">
-        <div>${lane(a)}<strong>${a}号艇 1着</strong></div>
-        <span>${entries.filter((x) => x.parts[0] === a).length}点</span>
-      </div>
-      <div class="odds-scroll">
-        <table class="odds-table">
-          <thead><tr><th>2着</th><th colspan="4">3着候補 / オッズ</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    </section>`;
-  }).join("");
-
-  return `<div class="card">
-    <h2>3連単オッズ</h2>
-    <div class="odds-summary">
-      ${popular.map((x, i) => `<div class="popular-odd ${i === 0 ? "rank1" : i === 1 ? "rank2" : ""}">
-        <span>${i + 1}人気</span><b>${x.combo}</b><strong>${x.value}</strong>
-      </div>`).join("")}
-    </div>
-    <div class="note odds-guide">各ブロックは「1着固定」。左が2着、横に3着候補とオッズを並べています。</div>
-    <div class="oddsboard grouped">${headBlocks}</div>
-  </div>`;
+  const items = Object.entries(odds).slice(0, 120);
+  return `<div class="card"><h2>3連単オッズ</h2>${items.length ? `<div class="oddsboard">${items.map(([k, v]) => `<div class="odrow"><b>${k}</b><span>${String(k).split("-").map((x) => lane(+x)).join("")}</span><strong>${v}</strong></div>`).join("")}</div>` : `<div class="note">オッズはまだ未取得です。</div>`}</div>`;
 }
 
 function finishBoat(n) {
@@ -720,16 +595,11 @@ function finishBoat(n) {
 }
 
 document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => showView(b.dataset.view));
-document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => selectPane(b.dataset.pane));
-$("backTop").onclick = () => showView("top");
-
-window.addEventListener("popstate", () => {
-  const state = routeState();
-  if (state.view === "race" && state.venue) {
-    openVenue(state.venue, state);
-  } else {
-    showView("top", false);
-  }
+document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => {
+  currentPane = b.dataset.pane;
+  document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x === b));
+  renderPane();
 });
+$("backTop").onclick = () => showView("top");
 
 init();
