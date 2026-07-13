@@ -148,10 +148,15 @@ async function restoreRoute() {
 function renderTop() {
   $("dateTitle").textContent = `${manifest.date || ""} のレース`;
   $("venueGrid").innerHTML = (manifest.venues || []).map((v) => {
-    if (!v.open) return `<div class="venue off"><h2>${v.name}</h2><p>非開催</p></div>`;
-    return `<button class="venue" onclick="openVenue('${v.slug}')">
+    if (!v.open) return `<div class="venue off">
+      <div class="venue-status off">非開催</div>
       <h2>${v.name}</h2>
-      <p>${v.entryCount || 0}R分<br>1R ${v.firstDeadline || "-"}</p>
+      <p>本日データなし</p>
+    </div>`;
+    return `<button class="venue" onclick="openVenue('${v.slug}')">
+      <div class="venue-status on">開催</div>
+      <h2>${v.name}</h2>
+      <p>${v.entryCount || 0}R分<br>1R締切 ${v.firstDeadline || "-"}</p>
       <strong>予想を見る</strong>
     </button>`;
   }).join("");

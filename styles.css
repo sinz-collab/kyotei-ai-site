@@ -19,11 +19,15 @@ button.active{background:var(--navy);color:#fff}
 .date-card,.card,.race-head{background:#fff;border:1px solid var(--line);border-radius:18px;margin-bottom:12px;padding:14px;box-shadow:0 8px 22px rgba(15,23,42,.05)}
 .date-card{text-align:center}.date-card b{font-size:18px}.date-card span,.note{display:block;color:var(--muted);font-size:12px;line-height:1.55;margin-top:4px}
 .venue-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
-.venue{min-height:110px;background:#fff;padding:8px 6px;text-align:center;position:relative}
-.venue.off{background:#e8edf3;color:#a8b2bd}
-.venue h2{margin:0 0 8px;font-size:18px;letter-spacing:-.04em}
-.venue p{margin:0;color:#4b5563;font-size:12px;font-weight:800;line-height:1.5}
+.venue{min-height:112px;background:#fff;padding:8px 6px;text-align:center;position:relative;border-radius:0;box-shadow:none}
+.venue.off{background:#eef2f6;color:#94a3b8}
+.venue h2{margin:7px 0 7px;font-size:17px;letter-spacing:0}
+.venue p{margin:0;color:#4b5563;font-size:11px;font-weight:800;line-height:1.45}
+.venue.off p{color:#94a3b8}
 .venue strong{display:inline-flex;margin-top:7px;padding:4px 7px;border-radius:999px;background:rgba(23,101,189,.1);color:#1765bd;font-size:11px}
+.venue-status{display:inline-flex;align-items:center;justify-content:center;min-width:52px;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:950}
+.venue-status.on{background:#dbeafe;color:#1d4ed8}
+.venue-status.off{background:#e5e7eb;color:#64748b}
 .back{margin-bottom:10px;background:#eef3f8;color:#1765bd}
 .race-head h1{margin:0;font-size:22px}.race-head p{margin:4px 0 0;color:var(--muted);font-size:12px;font-weight:800}
 .lane{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:10px;border:1px solid;font-weight:950}
