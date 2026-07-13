@@ -5,6 +5,7 @@ const DATA_BASES = (Array.isArray(window.KYOTEI_DATA_BASES) && window.KYOTEI_DAT
 
 let manifest = null;
 let currentPayload = null;
+let currentVenueSlug = "";
 let currentRaceNo = 1;
 let currentPane = "entry";
 let ticketMode = "ai";
@@ -87,12 +88,39 @@ async function fetchJson(path) {
   throw lastError || new Error(`failed to load ${path}`);
 }
 
+function parseRoute() {
+  const raw = location.hash.replace(/^#/, "");
+  if (!raw) return {};
+  const params = new URLSearchParams(raw);
+  return {
+    venue: params.get("venue") || "",
+    race: Number(params.get("race") || ""),
+    pane: params.get("pane") || "",
+  };
+}
+
+function updateRoute() {
+  if (!currentVenueSlug || !currentPayload) return;
+  const params = new URLSearchParams();
+  params.set("venue", currentVenueSlug);
+  params.set("race", String(currentRaceNo));
+  params.set("pane", currentPane);
+  history.replaceState(null, "", `${location.pathname}${location.search}#${params.toString()}`);
+}
+
+function clearRoute() {
+  currentVenueSlug = "";
+  history.replaceState(null, "", `${location.pathname}${location.search}`);
+}
+
 async function init() {
   try {
     $("syncState").textContent = "LOADING";
     manifest = await fetchJson("manifest.json");
     $("syncState").textContent = "LIVE JSON";
     renderTop();
+    const route = parseRoute();
+    if (route.venue) await openVenue(route.venue, route);
   } catch (err) {
     $("syncState").textContent = "ERROR";
     $("venueGrid").innerHTML = `<div class="error">JSONを読み込めませんでした。<br>${err.message}<br><span class="note">config.js の KYOTEI_DATA_BASE を確認してください。</span></div>`;
@@ -116,15 +144,17 @@ function renderTop() {
   }).join("");
 }
 
-async function openVenue(slug) {
+async function openVenue(slug, route = {}) {
   const v = manifest.venues.find((x) => x.slug === slug);
   if (!v) return;
   $("syncState").textContent = "FETCH";
   currentPayload = await fetchJson(v.dataPath || v.latestPath);
+  currentVenueSlug = slug;
   currentPayload.venue = currentPayload.venue || v.name;
   currentPayload.date = currentPayload.date || v.date || manifest.date;
-  currentRaceNo = currentPayload.races?.[0]?.race || 1;
-  currentPane = "entry";
+  const races = currentPayload.races || [];
+  currentRaceNo = races.some((r) => Number(r.race) === Number(route.race)) ? Number(route.race) : (races[0]?.race || 1);
+  currentPane = ["entry", "compare", "realtime", "tide", "odds", "prediction", "logs", "result"].includes(route.pane) ? route.pane : "entry";
   $("syncState").textContent = "LIVE JSON";
   showView("race");
   renderRace();
@@ -134,6 +164,7 @@ function showView(view) {
   $("topView").hidden = view !== "top";
   $("raceView").hidden = view !== "race";
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  if (view === "top") clearRoute();
 }
 
 function race() {
@@ -152,6 +183,7 @@ function renderRace() {
     `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="currentRaceNo=${x.race};renderRace()">${x.race}R</button>`
   ).join("");
   document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x.dataset.pane === currentPane));
+  updateRoute();
   renderPane();
 }
 
@@ -638,6 +670,7 @@ document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => showV
 document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => {
   currentPane = b.dataset.pane;
   document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x === b));
+  updateRoute();
   renderPane();
 });
 $("backTop").onclick = () => showView("top");
