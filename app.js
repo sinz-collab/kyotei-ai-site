@@ -370,6 +370,33 @@ function kimariteInfo(b) {
     mixed_type: "万能型",
     no_win_sample: "勝ちサンプル少",
   };
+  const bkStarts = num(b.boaters_kimarite_starts, 0);
+  if (bkStarts >= 1) {
+    if (Number(b.lane) === 1) {
+      const escape = num(b.boaters_escape_rate, NaN);
+      const sashare = num(b.boaters_sashare_rate, NaN);
+      const makurare = num(b.boaters_makurare_rate, NaN);
+      const makurareZashi = num(b.boaters_makurare_zashi_rate, NaN);
+      const attacked = Math.max(
+        Number.isFinite(sashare) ? sashare : 0,
+        Number.isFinite(makurare) ? makurare : 0,
+        Number.isFinite(makurareZashi) ? makurareZashi : 0
+      );
+      const score = (Number.isFinite(escape) ? escape : 0) - attacked * 0.25;
+      return {
+        score,
+        main: `逃げ ${Number.isFinite(escape) ? escape.toFixed(1) : "-"}%`,
+        sub: `差され ${Number.isFinite(sashare) ? sashare.toFixed(1) : "-"}% / まくられ差 ${Number.isFinite(makurareZashi) ? makurareZashi.toFixed(1) : "-"}% / ${bkStarts}走`,
+      };
+    }
+    const s = num(b.boaters_sashi_rate, NaN), m = num(b.boaters_makuri_rate, NaN), ms = num(b.boaters_makuri_sashi_rate, NaN);
+    const score = Math.max(Number.isFinite(s) ? s : 0, Number.isFinite(m) ? m : 0, Number.isFinite(ms) ? ms : 0);
+    return {
+      score,
+      main: `差 ${Number.isFinite(s) ? s.toFixed(1) : "-"}% / ま ${Number.isFinite(m) ? m.toFixed(1) : "-"}%`,
+      sub: `ま差 ${Number.isFinite(ms) ? ms.toFixed(1) : "-"}% / 逃し ${safe(b.boaters_nigashi_rate)}% / ${bkStarts}走`,
+    };
+  }
   const kimType = typeMap[b.kimarite_main] || typeMap[b.kimarite_attack_type] || safe(b.kimarite_main || b.kimarite_attack_type, "");
   const sample = `${safe(b.kimarite_starts)}走 / 勝 ${safe(b.kimarite_wins)}`;
   if (Number(b.lane) === 1) {
