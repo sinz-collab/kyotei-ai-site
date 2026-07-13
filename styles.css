@@ -18,16 +18,17 @@ button.active{background:var(--navy);color:#fff}
 .content{padding:14px 11px 28px}
 .date-card,.card,.race-head{background:#fff;border:1px solid var(--line);border-radius:18px;margin-bottom:12px;padding:14px;box-shadow:0 8px 22px rgba(15,23,42,.05)}
 .date-card{text-align:center}.date-card b{font-size:18px}.date-card span,.note{display:block;color:var(--muted);font-size:12px;line-height:1.55;margin-top:4px}
-.venue-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
-.venue{min-height:112px;background:#fff;padding:8px 6px;text-align:center;position:relative;border-radius:0;box-shadow:none}
-.venue.off{background:#eef2f6;color:#94a3b8}
-.venue h2{margin:7px 0 7px;font-size:17px;letter-spacing:0}
-.venue p{margin:0;color:#4b5563;font-size:11px;font-weight:800;line-height:1.45}
+.venue-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
+.venue{min-height:78px;background:#fff;padding:5px 4px;text-align:center;position:relative;border-radius:0;box-shadow:none}
+.venue:not(.off){background:#fff;border-top:3px solid #1765bd}
+.venue.off{background:#eef2f6;color:#94a3b8;border-top:3px solid #cbd5e1}
+.venue h2{margin:4px 0 3px;font-size:14px;letter-spacing:0;line-height:1.15}
+.venue p{margin:0;color:#4b5563;font-size:9px;font-weight:800;line-height:1.25}
 .venue.off p{color:#94a3b8}
-.venue strong{display:inline-flex;margin-top:7px;padding:4px 7px;border-radius:999px;background:rgba(23,101,189,.1);color:#1765bd;font-size:11px}
-.venue-status{display:inline-flex;align-items:center;justify-content:center;min-width:52px;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:950}
-.venue-status.on{background:#dbeafe;color:#1d4ed8}
-.venue-status.off{background:#e5e7eb;color:#64748b}
+.venue strong{display:none}
+.venue-status{display:block;width:100%;padding:2px 0;border-radius:2px;font-size:9px;font-weight:950;line-height:1.1}
+.venue-status.on{background:#1765bd;color:#fff}
+.venue-status.off{background:#d7dee8;color:#64748b}
 .back{margin-bottom:10px;background:#eef3f8;color:#1765bd}
 .race-head h1{margin:0;font-size:22px}.race-head p{margin:4px 0 0;color:var(--muted);font-size:12px;font-weight:800}
 .lane{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:10px;border:1px solid;font-weight:950}
@@ -87,4 +88,4 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 .result-main{display:grid;gap:10px}.result-line{background:linear-gradient(180deg,#f8fafc,#fff);border:1px solid var(--line);border-radius:16px;padding:12px}.result-label{font-size:12px;color:#64748b;font-weight:900;margin-bottom:8px}.finish-row{display:flex;align-items:center;gap:8px}.finish-boat{display:grid;place-items:center;width:52px;height:52px;border-radius:14px;border:2px solid rgba(15,23,42,.10);font-weight:950;font-size:24px;box-shadow:0 8px 18px rgba(15,23,42,.08)}.finish-boat.one{background:#fff;color:#111827}.finish-boat.two{background:#111827;color:#fff}.finish-boat.three{background:#dc2626;color:#fff}.finish-boat.four{background:#1d7eea;color:#fff}.finish-boat.five{background:#facc15;color:#111827}.finish-boat.six{background:#10a38a;color:#fff}.finish-arrow{font-weight:950;color:#94a3b8}.result-pay{display:grid;grid-template-columns:1.2fr .8fr;gap:8px}.paybox{background:#fff;border:1px solid var(--line);border-radius:13px;padding:10px;text-align:center}.paybox span{display:block;font-size:11px;color:#64748b;font-weight:900}.paybox b{display:block;font-size:22px;margin-top:2px}.result-sub{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.result-sub .paybox{padding:7px 5px}.result-sub .paybox b{font-size:14px}
 .log{border-left:4px solid #dbeafe;background:#f8fafc;border-radius:12px;padding:9px;margin:7px 0}.log-title{font-size:12px;font-weight:950}.log-body{font-size:12px;color:#667085;line-height:1.55;margin-top:2px}
 .error{padding:14px;background:#fff1f2;border:1px solid #fecdd3;color:#991b1b;border-radius:16px}
-@media(max-width:380px){.venue{min-height:104px}.venue h2{font-size:16px}.ticket{grid-template-columns:1fr 62px}}
+@media(max-width:380px){.venue{min-height:74px}.venue h2{font-size:13px}.ticket{grid-template-columns:1fr 62px}}
