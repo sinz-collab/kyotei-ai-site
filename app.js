@@ -494,10 +494,10 @@ function renderSlit(realtime) {
   const line = 66;
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const pos = (n) => {
-    const raw = String(last[n]?.st_raw || last[n]?.st || last[n]?.ST || "");
+    const raw = String(last[n]?.st_raw || last[n]?.st || last[n]?.ST || "").trim();
     const v = num(raw, NaN);
     if (!Number.isFinite(v)) return 45;
-    if (raw.startsWith("F")) return clamp(line + Math.abs(v) * 150, line + 4, 82);
+    if (raw.startsWith("F")) return clamp(line + Math.abs(v) * 70, line + 3, 82);
     return clamp(line - v * 185, 28, line - 2);
   };
   const order = rows.sort((a, b) => realtimeCourse(last[a], a) - realtimeCourse(last[b], b));
