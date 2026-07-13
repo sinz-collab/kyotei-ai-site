@@ -643,12 +643,13 @@ function renderResult() {
   const p = pred(), r = p.result || {};
   const hitAi = (r.hitAi || []).length, hitUpset = (r.hitUpset || []).length;
   const order = String(r.order || "").split("-").filter(Boolean);
+  const kimariteNote = r.kimariteSource === "inferred" ? `<small>推定</small>` : "";
   return `<div class="card result-main"><h2>レース結果</h2>
     <div class="stage ${r.status === "ok" ? "green" : "yellow"}"><div><b>${r.status === "ok" ? "結果取得済み" : "結果待ち"}</b><br>${r.message || ""}</div><span>${r.status === "ok" ? "確定" : "待機"}</span></div>
     ${r.order ? `<div class="result-line"><div class="result-label">3連単 着順</div><div class="finish-row">${order.map((n, i) => `${i ? '<span class="finish-arrow" aria-hidden="true"></span>' : ""}${finishBoat(n)}`).join("")}</div></div>
       <div class="result-pay"><div class="paybox"><span>払戻</span><b>${safe(r.payout3t)}</b></div><div class="paybox"><span>人気</span><b>${safe(r.popularity3t)}</b></div></div>` :
       `<div class="result-line"><div class="result-label">結果待ち</div><div class="note">締切9分後から結果取得を試します。</div></div>`}
-    <div class="result-sub"><div class="paybox"><span>決まり手</span><b>${safe(r.kimarite)}</b></div><div class="paybox"><span>AI予想</span><b>${hitAi ? "的中" : "-"}</b></div><div class="paybox"><span>AI荒れ</span><b>${hitUpset ? "的中" : "-"}</b></div></div>
+    <div class="result-sub"><div class="paybox"><span>決まり手</span><b>${safe(r.kimarite)}</b>${kimariteNote}</div><div class="paybox"><span>AI予想</span><b>${hitAi ? "的中" : "-"}</b></div><div class="paybox"><span>AI荒れ</span><b>${hitUpset ? "的中" : "-"}</b></div></div>
   </div>`;
 }
 
