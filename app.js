@@ -466,10 +466,14 @@ function rowMap(obj) {
   const rows = normalizeRealtimeRows(obj);
   const map = {};
   for (const x of rows) {
-    const n = Number(x.lane || x.frame || x.course);
+    const n = Number(x.entry || x.frame || x.boat || x.boat_no || x.lane);
     if (n) map[n] = x;
   }
   return map;
+}
+
+function realtimeCourse(row, fallback) {
+  return num(row?.start_course || row?.startCourse || row?.course || (row?.entry ? row?.lane : ""), fallback);
 }
 
 function valueRankClass(map, laneNo, key, lowerBetter = true) {
@@ -496,11 +500,11 @@ function renderSlit(realtime) {
     if (raw.startsWith("F")) return clamp(line + Math.abs(v) * 150, line + 4, 82);
     return clamp(line - v * 185, 28, line - 2);
   };
-  const order = rows.sort((a, b) => num(last[a]?.start_course || last[a]?.course, a) - num(last[b]?.start_course || last[b]?.course, b));
+  const order = rows.sort((a, b) => realtimeCourse(last[a], a) - realtimeCourse(last[b], b));
   const changed = order.some((n, i) => n !== i + 1);
   return `<h3>スリット隊形 ${changed ? '<span class="note">進入変更あり</span>' : ""}</h3>
     <div class="slit">${order.map((n, i) => `<div class="slit-row" style="top:${20 + i * 30}px">
-      <div class="slit-lane">${lane(n)}<small>${last[n]?.start_course || last[n]?.course ? safe(last[n]?.start_course || last[n]?.course) + "コース" : ""}</small></div>
+      <div class="slit-lane">${lane(n)}<small>${realtimeCourse(last[n], n)}コース</small></div>
       <div class="boatmark" style="left:calc(${pos(n)}% - 14px);background:${boatColor(n)};color:${n === 1 || n === 5 ? "#111" : "#fff"}">${n}</div>
       <div class="slit-st ${String(last[n]?.st_raw || last[n]?.st || "").startsWith("F") ? "f" : ""}">${safe(last[n]?.st_raw || last[n]?.st || last[n]?.ST)}</div>
     </div>`).join("")}</div>`;
