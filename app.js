@@ -597,6 +597,21 @@ function renderTide() {
 function renderPrediction() {
   const p = pred(), r = p.readability || {}, s = p.predictionStage || {};
   const tickets = p[ticketMode] || [];
+  const delta = (review, key) => {
+    const v = num(review?.[key], NaN);
+    if (!Number.isFinite(v) || v === 0) return `<span class="prob-delta flat">±0.0</span>`;
+    return `<span class="prob-delta ${v > 0 ? "up" : "down"}">${v > 0 ? "+" : ""}${v.toFixed(1)}</span>`;
+  };
+  const probRows = [1,2,3,4,5,6].map((n) => {
+    const review = p.probabilityReview?.[n] || p.probabilityReview?.[String(n)] || {};
+    return `<tr>
+      <td>${lane(n)}</td>
+      <td><b>${pctInt(p.win?.[n])}</b>${delta(review, "deltaWin")}</td>
+      <td><b>${pctInt(p.second?.[n])}</b>${delta(review, "deltaSecond")}</td>
+      <td><b>${pctInt(p.third?.[n])}</b>${delta(review, "deltaThird")}</td>
+    </tr>`;
+  }).join("");
+  const reviewNote = p.probabilityReviewStatus === "reviewed" ? `<div class="note">直前情報・展示・水面を反映して全艇の1着率から3着率まで再精査済み。小数字は朝予想からの増減です。</div>` : "";
   return `<div class="card">
     <div class="stage ${s.color || ""}"><div><b>${s.label || "AI予想"}</b><br>${s.statusText || ""}</div><span>${s.badge || ""}</span></div>
     <h2>${currentPayload.venue || ""}ロジック予想</h2>
@@ -607,8 +622,8 @@ function renderPrediction() {
     </div>
     <div class="note">軸候補：${r.axisLane ? r.axisLane + "号艇" : "-"} / ${safe(r.comment, "")}</div>
   </div>
-  <div class="card"><h2>全艇確率</h2>
-    <table><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th></tr>${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${pctInt(p.win?.[n])}</td><td>${pctInt(p.second?.[n])}</td><td>${pctInt(p.third?.[n])}</td></tr>`).join("")}</table>
+  <div class="card"><h2>全艇確率</h2>${reviewNote}
+    <table class="prob-table"><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th></tr>${probRows}</table>
   </div>
   <div class="card"><h2>買い目</h2>
     <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">AI予想</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">AI荒れ予想</button></div>
