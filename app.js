@@ -304,10 +304,17 @@ function courseLabel(b) {
   return "標準";
 }
 
+function courseClass(label) {
+  return String(label).includes("得意") ? "good" : String(label).includes("苦手") ? "bad" : "normal";
+}
+
 function courseSummary(b) {
+  const label = courseLabel(b);
+  const course = safe(b.entry_course || b.course || b.lane);
+  const diff = b.course_top3_diff === undefined || b.course_top3_diff === "" ? "" : ` / 平均差 ${safe(b.course_top3_diff)}pt`;
   return `<div class="coursebox">
-    <b>コース適性：<span class="${courseLabel(b).includes("得意") ? "good" : courseLabel(b).includes("苦手") ? "bad" : "normal"}">${courseLabel(b)}</span></b><br>
-    件数 ${safe(b.course_starts)} / 1着 ${safe(b.course_win_rate)}% / 3連 ${safe(b.course_top3_rate)}% / 信頼 ${safe(b.course_reliability)}
+    <b>${course}コース適性：<span class="${courseClass(label)}">${label}</span></b><br>
+    件数 ${safe(b.course_starts)} / 1着 ${safe(b.course_win_rate)}% / 3連 ${safe(b.course_top3_rate)}% / 信頼 ${safe(b.course_reliability)}${diff}
   </div>`;
 }
 
@@ -354,13 +361,24 @@ function courseScore(b) {
 }
 
 function kimariteInfo(b) {
+  const typeMap = {
+    escape_type: "逃げ型",
+    sashi_type: "差し型",
+    makuri_type: "まくり型",
+    makuri_zashi_type: "まくり差し型",
+    center_attack_type: "センター攻め型",
+    mixed_type: "万能型",
+    no_win_sample: "勝ちサンプル少",
+  };
+  const kimType = typeMap[b.kimarite_main] || typeMap[b.kimarite_attack_type] || safe(b.kimarite_main || b.kimarite_attack_type, "");
+  const sample = `${safe(b.kimarite_starts)}走 / 勝 ${safe(b.kimarite_wins)}`;
   if (Number(b.lane) === 1) {
     const v = num(b.escape_rate, NaN);
-    return { score: Number.isFinite(v) ? v : 0, main: `逃げ ${Number.isFinite(v) ? v.toFixed(1) : "-"}%`, sub: `${safe(b.kimarite_starts)}走 / 勝 ${safe(b.kimarite_wins)}` };
+    return { score: Number.isFinite(v) ? v : 0, main: `逃げ ${Number.isFinite(v) ? v.toFixed(1) : "-"}%`, sub: kimType ? `${kimType} / ${sample}` : sample };
   }
   const s = num(b.sashi_rate, NaN), m = num(b.makuri_rate, NaN), ms = num(b.makuri_sashi_rate, NaN);
   const score = Math.max(Number.isFinite(s) ? s : 0, Number.isFinite(m) ? m : 0, Number.isFinite(ms) ? ms : 0);
-  return { score, main: `差 ${Number.isFinite(s) ? s.toFixed(1) : "-"}% / ま ${Number.isFinite(m) ? m.toFixed(1) : "-"}%`, sub: `ま差 ${Number.isFinite(ms) ? ms.toFixed(1) : "-"}%` };
+  return { score, main: `${kimType ? kimType + " " : ""}差 ${Number.isFinite(s) ? s.toFixed(1) : "-"}% / ま ${Number.isFinite(m) ? m.toFixed(1) : "-"}%`, sub: `ま差 ${Number.isFinite(ms) ? ms.toFixed(1) : "-"}% / ${sample}` };
 }
 
 function seasonScore(b) {
