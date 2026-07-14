@@ -28,11 +28,13 @@ button.active{background:var(--navy);color:#fff}
 .venue p{margin:0;color:#4b5563;font-size:9px;font-weight:800;line-height:1.25}
 .venue.off p{color:#94a3b8}
 .venue strong{display:none}
-.venue-status{display:block;width:100%;padding:2px 0;border-radius:2px;font-size:9px;font-weight:950;line-height:1.1}
+.venue-status{display:flex;align-items:center;justify-content:center;gap:3px;width:100%;min-height:17px;padding:2px 1px;border-radius:2px;font-size:9px;font-weight:950;line-height:1.1}
+.venue-status b{font-size:10px;line-height:1}
 .venue-status.on{background:#1765bd;color:#fff}
 .venue-status.off{background:#d7dee8;color:#64748b}
 .back{margin-bottom:10px;background:#eef3f8;color:#1765bd}
 .race-head h1{margin:0;font-size:22px}.race-head p{margin:4px 0 0;color:var(--muted);font-size:12px;font-weight:800}
+.event-day-badge{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:4px 9px;border-radius:7px;background:#1765bd;color:#fff;font-size:14px;font-weight:950;line-height:1}
 .lane{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:10px;border:1px solid;font-weight:950}
 .boat{display:grid;grid-template-columns:34px 1fr;gap:10px;margin:10px 0}
 .name{font-weight:950;color:#1269aa}.grade{display:inline-block;margin-left:5px;background:#755726;color:#fff;border-radius:5px;padding:1px 5px;font-size:12px}.grade.a{background:#dc2626}

@@ -12,6 +12,7 @@ let ticketMode = "ai";
 
 const $ = (id) => document.getElementById(id);
 const safe = (v, fallback = "-") => (v === undefined || v === null || v === "" ? fallback : v);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const yen = (v) => safe(v);
 const num = (v, fallback = 0) => {
   const n = Number(String(v ?? "").replace(/[^\d.\-]/g, ""));
@@ -130,13 +131,14 @@ async function init() {
 function renderTop() {
   $("dateTitle").textContent = `${manifest.date || ""} のレース`;
   $("venueGrid").innerHTML = (manifest.venues || []).map((v) => {
+    const eventLabel = v.eventDayLabel ? `<b>${esc(v.eventDayLabel)}</b>` : "";
     if (!v.open) return `<div class="venue off">
       <div class="venue-status off">非開催</div>
       <h2>${v.name}</h2>
       <p>本日データなし</p>
     </div>`;
     return `<button class="venue" onclick="openVenue('${v.slug}')">
-      <div class="venue-status on">開催</div>
+      <div class="venue-status on"><span>開催</span>${eventLabel}</div>
       <h2>${v.name}</h2>
       <p>${v.entryCount || 0}R分<br>1R締切 ${v.firstDeadline || "-"}</p>
       <strong>予想を見る</strong>
@@ -152,6 +154,8 @@ async function openVenue(slug, route = {}) {
   currentVenueSlug = slug;
   currentPayload.venue = currentPayload.venue || v.name;
   currentPayload.date = currentPayload.date || v.date || manifest.date;
+  currentPayload.eventDayLabel = currentPayload.eventDayLabel || v.eventDayLabel || "";
+  currentPayload.eventDay = currentPayload.eventDay || v.eventDay || "";
   const races = currentPayload.races || [];
   currentRaceNo = races.some((r) => Number(r.race) === Number(route.race)) ? Number(route.race) : (races[0]?.race || 1);
   currentPane = ["entry", "compare", "realtime", "tide", "odds", "prediction", "logs", "result"].includes(route.pane) ? route.pane : "entry";
@@ -175,11 +179,16 @@ function pred() {
   return currentPayload?.preds?.[String(currentRaceNo)] || {};
 }
 
+function eventDayLabel() {
+  const r = race();
+  return r.eventDayLabel || currentPayload?.eventDayLabel || currentPayload?.seriesDay || "";
+}
+
 function renderRace() {
   const r = race();
   $("venueTitle").textContent = `${currentPayload.venue || "-"} ${currentRaceNo}R`;
-  const seriesDay = currentPayload.seriesDay ? ` / ${currentPayload.seriesDay}` : "";
-  $("venueMeta").textContent = `${currentPayload.date || ""}${seriesDay} / 締切 ${r.deadline || "-"} / ${currentPayload.engine || ""}`;
+  const dayLabel = eventDayLabel();
+  $("venueMeta").innerHTML = `${esc(currentPayload.date || "")} ${dayLabel ? `<span class="event-day-badge">${esc(dayLabel)}</span>` : ""}<br>締切 ${esc(r.deadline || "-")} / ${esc(currentPayload.engine || "")}`;
   $("raceTabs").innerHTML = (currentPayload.races || []).map((x) =>
     `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="currentRaceNo=${x.race};renderRace()">${x.race}R</button>`
   ).join("");
