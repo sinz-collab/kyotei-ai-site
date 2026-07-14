@@ -625,7 +625,9 @@ function renderTide() {
 function renderPrediction() {
   const p = pred(), r = p.readability || {}, s = p.predictionStage || {};
   const tickets = p[ticketMode] || [];
+  const showDeltas = p.probabilityReviewStatus === "reviewed";
   const delta = (review, key) => {
+    if (!showDeltas) return "";
     const v = num(review?.[key], NaN);
     if (!Number.isFinite(v) || v === 0) return `<span class="prob-delta flat">±0.0</span>`;
     return `<span class="prob-delta ${v > 0 ? "up" : "down"}">${v > 0 ? "+" : ""}${v.toFixed(1)}</span>`;
@@ -639,7 +641,7 @@ function renderPrediction() {
       <td><b>${pctInt(p.third?.[n])}</b>${delta(review, "deltaThird")}</td>
     </tr>`;
   }).join("");
-  const reviewNote = p.probabilityReviewStatus === "reviewed" ? `<div class="note">直前情報・展示・水面を反映して全艇の1着率から3着率まで再精査済み。小数字は朝予想からの増減です。</div>` : "";
+  const reviewNote = showDeltas ? `<div class="note">直前情報・展示・水面を反映して全艇の1着率から3着率まで再精査済み。小数字は朝予想からの増減です。</div>` : "";
   return `<div class="card">
     <div class="stage ${s.color || ""}"><div><b>${s.label || "AI予想"}</b><br>${s.statusText || ""}</div><span>${s.badge || ""}</span></div>
     <h2>${currentPayload.venue || ""}ロジック予想</h2>
