@@ -178,7 +178,8 @@ function pred() {
 function renderRace() {
   const r = race();
   $("venueTitle").textContent = `${currentPayload.venue || "-"} ${currentRaceNo}R`;
-  $("venueMeta").textContent = `${currentPayload.date || ""} / 締切 ${r.deadline || "-"} / ${currentPayload.engine || ""}`;
+  const seriesDay = currentPayload.seriesDay ? ` / ${currentPayload.seriesDay}` : "";
+  $("venueMeta").textContent = `${currentPayload.date || ""}${seriesDay} / 締切 ${r.deadline || "-"} / ${currentPayload.engine || ""}`;
   $("raceTabs").innerHTML = (currentPayload.races || []).map((x) =>
     `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="currentRaceNo=${x.race};renderRace()">${x.race}R</button>`
   ).join("");
