@@ -24,6 +24,10 @@ const pctInt = (v) => {
   const n = num(v, NaN);
   return Number.isFinite(n) ? `${Math.round(n)}%` : "-";
 };
+const pct1 = (v) => {
+  const n = num(v, NaN);
+  return Number.isFinite(n) ? `${n.toFixed(1)}%` : "-";
+};
 
 function dataUrls(path) {
   const cleanPath = String(path).replace(/^\//, "");
@@ -652,8 +656,8 @@ function renderPrediction() {
   const probCell = (n, currentMap, review, valueKey, morningKey, deltaKey) => {
     const baseValue = review?.[morningKey] ?? currentMap?.[n] ?? currentMap?.[String(n)];
     const adjustedValue = review?.[valueKey] ?? currentMap?.[n] ?? currentMap?.[String(n)];
-    const adjusted = showDeltas ? `<span class="adjusted-prob">調整後 ${pctInt(adjustedValue)}${delta(review, deltaKey)}</span>` : `<span class="adjusted-prob pending">調整後 -</span>`;
-    return `<b>${pctInt(baseValue)}</b>${adjusted}`;
+    const adjusted = showDeltas ? `<span class="adjusted-prob">調整後 ${pct1(adjustedValue)}${delta(review, deltaKey)}</span>` : `<span class="adjusted-prob pending">調整後 -</span>`;
+    return `<b>${pct1(baseValue)}</b>${adjusted}`;
   };
   const probRows = [1,2,3,4,5,6].map((n) => {
     const review = p.probabilityReview?.[n] || p.probabilityReview?.[String(n)] || {};
