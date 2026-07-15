@@ -638,6 +638,11 @@ function renderPrediction() {
   const tickets = p[ticketMode] || [];
   const showDeltas = p.probabilityReviewStatus === "reviewed";
   const flow = p.probabilityFlow || {};
+  const stageLabel = (flow.reviewed || showDeltas) ? "本予想" : "仮予想";
+  const stageStatus = (flow.reviewed || showDeltas)
+    ? "展示・スリット・直前情報を反映して再精査済み"
+    : "前データでのエンジン予想。直前・展示取得後に本予想へ更新";
+  const stageColor = (flow.reviewed || showDeltas) ? "green" : "yellow";
   const delta = (review, key) => {
     if (!showDeltas) return "";
     const v = num(review?.[key], NaN);
@@ -668,7 +673,7 @@ function renderPrediction() {
     ? `<div class="note">上段は直前前の予想エンジン値、下段は展示・スリット・直前情報を反映して再精査した調整後です。</div>`
     : `<div class="note">上段は直前前の予想エンジン値です。展示・スリット・直前情報が入り、再精査済みになると下段に調整後の数字を表示します。</div>`;
   return `<div class="card">
-    <div class="stage ${s.color || ""}"><div><b>${s.label || "AI予想"}</b><br>${s.statusText || ""}</div><span>${s.badge || ""}</span></div>
+    <div class="stage ${stageColor}"><div><b>${stageLabel}</b><br>${stageStatus}</div><span>${stageLabel}</span></div>
     <h2>${currentPayload.venue || ""}ロジック予想</h2>
     <div class="probgrid">
       <div class="probcard"><span>SAB</span><b>${safe(p.sab)}</b></div>
