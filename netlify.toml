@@ -1,6 +1,12 @@
 [build]
   publish = "."
 
+[[redirects]]
+  from = "/*"
+  to = "https://sinz-collab.github.io/kyotei-ai-site/:splat"
+  status = 301
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]
@@ -12,4 +18,3 @@
   for = "/*.html"
   [headers.values]
     Cache-Control = "public, max-age=60"
-
