@@ -656,8 +656,10 @@ function renderPrediction() {
   const probCell = (n, currentMap, review, valueKey, morningKey, deltaKey) => {
     const baseValue = review?.[morningKey] ?? currentMap?.[n] ?? currentMap?.[String(n)];
     const adjustedValue = review?.[valueKey] ?? currentMap?.[n] ?? currentMap?.[String(n)];
-    const adjusted = showDeltas ? `<span class="adjusted-prob">調整後 ${pct1(adjustedValue)}${delta(review, deltaKey)}</span>` : `<span class="adjusted-prob pending">調整後 -</span>`;
-    return `<b>${pct1(baseValue)}</b>${adjusted}`;
+    if (showDeltas) {
+      return `<b>${pct1(adjustedValue)}${delta(review, deltaKey)}</b><span class="adjusted-prob">修正前 ${pct1(baseValue)}</span>`;
+    }
+    return `<b>${pct1(baseValue)}</b><span class="adjusted-prob pending">修正前 -</span>`;
   };
   const probRows = [1,2,3,4,5,6].map((n) => {
     const review = p.probabilityReview?.[n] || p.probabilityReview?.[String(n)] || {};
@@ -674,8 +676,8 @@ function renderPrediction() {
     <span class="${showDeltas ? "done" : "wait"}">3 ${flow.reviewLabel || "再精査後の調整数字"}</span>
   </div>`;
   const reviewNote = showDeltas
-    ? `<div class="note">上段は直前前の予想エンジン値、下段は展示・スリット・直前情報を反映して再精査した調整後です。</div>`
-    : `<div class="note">上段は直前前の予想エンジン値です。展示・スリット・直前情報が入り、再精査済みになると下段に調整後の数字を表示します。</div>`;
+    ? `<div class="note">上段は展示・スリット・直前情報を反映して再精査した修正後、下段は修正前の前データです。</div>`
+    : `<div class="note">現在は前データでの仮予想です。展示・スリット・直前情報が入り、再精査済みになると上段に修正後、下段に修正前を表示します。</div>`;
   return `<div class="card">
     <div class="stage ${stageColor}"><div><b>${stageLabel}</b><br>${stageStatus}</div><span>${stageLabel}</span></div>
     <h2>${currentPayload.venue || ""}ロジック予想</h2>
