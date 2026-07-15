@@ -13,6 +13,7 @@ let ticketMode = "ai";
 const $ = (id) => document.getElementById(id);
 const safe = (v, fallback = "-") => (v === undefined || v === null || v === "" ? fallback : v);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const firstValue = (...values) => values.find((v) => v !== undefined && v !== null && v !== "");
 const yen = (v) => safe(v);
 const num = (v, fallback = 0) => {
   const n = Number(String(v ?? "").replace(/[^\d.\-]/g, ""));
@@ -548,8 +549,9 @@ function renderSlit(realtime) {
   if (!rows.length) return `<h3>スリット隊形</h3><div class="note">スリット情報はまだ未取得です。</div>`;
   const line = 66;
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const slitSt = (n) => firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST);
   const pos = (n) => {
-    const raw = String(last[n]?.st_raw || last[n]?.st || last[n]?.ST || "").trim();
+    const raw = String(firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST, "")).trim();
     const v = num(raw, NaN);
     if (!Number.isFinite(v)) return 45;
     if (raw.startsWith("F")) return clamp(line + Math.abs(v) * 70, line + 3, 82);
@@ -561,7 +563,7 @@ function renderSlit(realtime) {
     <div class="slit">${order.map((n, i) => `<div class="slit-row" style="top:${20 + i * 30}px">
       <div class="slit-lane">${lane(n)}<small>${realtimeCourse(last[n], n)}コース</small></div>
       <div class="boatmark" style="left:calc(${pos(n)}% - 14px);background:${boatColor(n)};color:${n === 1 || n === 5 ? "#111" : "#fff"}">${n}</div>
-      <div class="slit-st ${String(last[n]?.st_raw || last[n]?.st || "").startsWith("F") ? "f" : ""}">${safe(last[n]?.st_raw || last[n]?.st || last[n]?.ST)}</div>
+      <div class="slit-st ${String(firstValue(last[n]?.st_raw, last[n]?.st, "")).startsWith("F") ? "f" : ""}">${safe(slitSt(n))}</div>
     </div>`).join("")}</div>`;
 }
 
@@ -579,7 +581,7 @@ function renderRealtime() {
   return `<div class="card"><h2>直前情報</h2>
       <div class="note">天候 ${safe(weather.weather)} / 風向 ${safe(windDirection)} / 風速 ${safe(windSpeed)}m / 波 ${safe(waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
       ${hasLast ? `<table><tr><th>枠</th><th>展示</th><th>ST</th><th>チルト</th><th>部品</th></tr>
-        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(last[n]?.time || last[n]?.displayTime, valueRankClass(last, n, last[n]?.time ? "time" : "displayTime"))}</td><td>${safe(last[n]?.st_raw || last[n]?.st || last[n]?.ST)}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
+        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(firstValue(last[n]?.time, last[n]?.displayTime), valueRankClass(last, n, firstValue(last[n]?.time, "") !== "" ? "time" : "displayTime"))}</td><td>${safe(firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST))}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
       </table>` : `<div class="note">直前情報はまだ未取得です。</div>`}
       ${renderSlit(rt)}
       <h3>オリジナル展示</h3>
