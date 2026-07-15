@@ -635,22 +635,36 @@ function renderPrediction() {
   const p = pred(), r = p.readability || {}, s = p.predictionStage || {};
   const tickets = p[ticketMode] || [];
   const showDeltas = p.probabilityReviewStatus === "reviewed";
+  const flow = p.probabilityFlow || {};
   const delta = (review, key) => {
     if (!showDeltas) return "";
     const v = num(review?.[key], NaN);
     if (!Number.isFinite(v) || v === 0) return `<span class="prob-delta flat">±0.0</span>`;
     return `<span class="prob-delta ${v > 0 ? "up" : "down"}">${v > 0 ? "+" : ""}${v.toFixed(1)}</span>`;
   };
+  const probCell = (n, currentMap, review, valueKey, morningKey, deltaKey) => {
+    const baseValue = review?.[morningKey] ?? currentMap?.[n] ?? currentMap?.[String(n)];
+    const adjustedValue = review?.[valueKey] ?? currentMap?.[n] ?? currentMap?.[String(n)];
+    const adjusted = showDeltas ? `<span class="adjusted-prob">調整後 ${pctInt(adjustedValue)}${delta(review, deltaKey)}</span>` : `<span class="adjusted-prob pending">調整後 -</span>`;
+    return `<b>${pctInt(baseValue)}</b>${adjusted}`;
+  };
   const probRows = [1,2,3,4,5,6].map((n) => {
     const review = p.probabilityReview?.[n] || p.probabilityReview?.[String(n)] || {};
     return `<tr>
       <td>${lane(n)}</td>
-      <td><b>${pctInt(p.win?.[n])}</b>${delta(review, "deltaWin")}</td>
-      <td><b>${pctInt(p.second?.[n])}</b>${delta(review, "deltaSecond")}</td>
-      <td><b>${pctInt(p.third?.[n])}</b>${delta(review, "deltaThird")}</td>
+      <td>${probCell(n, p.win, review, "win", "morningWin", "deltaWin")}</td>
+      <td>${probCell(n, p.second, review, "second", "morningSecond", "deltaSecond")}</td>
+      <td>${probCell(n, p.third, review, "third", "morningThird", "deltaThird")}</td>
     </tr>`;
   }).join("");
-  const reviewNote = showDeltas ? `<div class="note">直前情報・展示・水面を反映して全艇の1着率から3着率まで再精査済み。小数字は朝予想からの増減です。</div>` : "";
+  const flowNote = `<div class="flow-steps">
+    <span class="done">1 ${flow.baseLabel || "直前前エンジン予想"}</span>
+    <span class="${flow.realtimeApplied ? "done" : "wait"}">2 ${flow.realtimeLabel || "展示・スリット・直前反映"}</span>
+    <span class="${showDeltas ? "done" : "wait"}">3 ${flow.reviewLabel || "再精査後の調整数字"}</span>
+  </div>`;
+  const reviewNote = showDeltas
+    ? `<div class="note">上段は直前前の予想エンジン値、下段は展示・スリット・直前情報を反映して再精査した調整後です。</div>`
+    : `<div class="note">上段は直前前の予想エンジン値です。展示・スリット・直前情報が入り、再精査済みになると下段に調整後の数字を表示します。</div>`;
   return `<div class="card">
     <div class="stage ${s.color || ""}"><div><b>${s.label || "AI予想"}</b><br>${s.statusText || ""}</div><span>${s.badge || ""}</span></div>
     <h2>${currentPayload.venue || ""}ロジック予想</h2>
@@ -661,7 +675,7 @@ function renderPrediction() {
     </div>
     <div class="note">軸候補：${r.axisLane ? r.axisLane + "号艇" : "-"} / ${safe(r.comment, "")}</div>
   </div>
-  <div class="card"><h2>全艇確率</h2>${reviewNote}
+  <div class="card"><h2>全艇確率</h2>${flowNote}${reviewNote}
     <table class="prob-table"><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th></tr>${probRows}</table>
   </div>
   <div class="card"><h2>買い目</h2>

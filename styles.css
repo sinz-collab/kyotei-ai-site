@@ -45,6 +45,8 @@ button.active{background:var(--navy);color:#fff}
 .stat span,.probcard span{display:block;font-size:10px;color:var(--muted)}.stat b,.probcard b{font-size:17px}
 table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px solid #edf2f7;padding:7px;text-align:center}th{background:#f8fafc;color:#667085}
 .prob-table td b{display:block}.prob-delta{display:inline-block;margin-top:2px;font-size:10px;font-weight:950}.prob-delta.up{color:#dc2626}.prob-delta.down{color:#2563eb}.prob-delta.flat{color:#94a3b8}
+.adjusted-prob{display:block;margin-top:3px;font-size:10px;font-weight:950;color:#0f766e;line-height:1.25}.adjusted-prob.pending{color:#94a3b8}
+.flow-steps{display:grid;grid-template-columns:1fr;gap:4px;margin:8px 0}.flow-steps span{display:block;border-radius:7px;padding:5px 7px;font-size:11px;font-weight:950}.flow-steps .done{background:#ecfdf5;color:#047857}.flow-steps .wait{background:#f1f5f9;color:#64748b}
 .ticket{display:grid;grid-template-columns:1fr 70px 58px;gap:8px;align-items:center;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:9px;margin:7px 0}
 .combo{font-weight:950;font-size:17px}.role{display:inline-flex;margin-top:4px;padding:2px 7px;border-radius:999px;background:#e7f5ff;color:#1765bd;font-size:11px;font-weight:900}
 .mode{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:10px 0}
