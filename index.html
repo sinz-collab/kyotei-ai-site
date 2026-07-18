@@ -6,7 +6,12 @@
   <title>SINZ EDGE</title>
   <script>
     (function () {
-      var build = "20260719-2";
+      var build = "20260719-3";
+      window.KYOTEI_DATA_BASES = [
+        "../../kyotei-ai-data/data",
+        "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/fb7c700e027cf9984218f612710bc00b8e520209/data",
+        "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/main/data"
+      ];
       var url = new URL(location.href);
       if (url.searchParams.get("v") !== build) {
         url.searchParams.set("v", build);
@@ -60,7 +65,6 @@
     </section>
   </main>
 
-  <script src="config.js?v=20260719-2"></script>
   <script src="app.js?v=20260719-2"></script>
 </body>
 </html>
