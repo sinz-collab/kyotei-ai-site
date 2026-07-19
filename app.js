@@ -1,6 +1,5 @@
 const DEFAULT_DATA_BASES = [
   "../../kyotei-ai-data/data",
-  "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/fb7c700e027cf9984218f612710bc00b8e520209/data",
   "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/main/data",
 ];
 const DATA_BASES = (Array.isArray(window.KYOTEI_DATA_BASES) && window.KYOTEI_DATA_BASES.length
