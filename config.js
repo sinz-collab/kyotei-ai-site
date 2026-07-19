@@ -1,5 +1,5 @@
 window.KYOTEI_DATA_BASES =
   window.KYOTEI_DATA_BASES ||
   (location.protocol === "file:" || ["localhost", "127.0.0.1", "::1"].includes(location.hostname)
-    ? ["../../kyotei-ai-data/data", "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/04c57e214bcd995ae490469b1def8aa28226a946/data", "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/main/data"]
-    : ["https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/04c57e214bcd995ae490469b1def8aa28226a946/data", "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/main/data"]);
+    ? ["../../kyotei-ai-data/data", "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/3b109adf86cd771edb60b3760bceaf3670fa3da8/data", "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/main/data"]
+    : ["https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/3b109adf86cd771edb60b3760bceaf3670fa3da8/data", "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/main/data"]);
