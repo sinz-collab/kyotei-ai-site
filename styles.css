@@ -33,6 +33,7 @@ button.active{background:var(--navy);color:#fff}
 .venue-status.on{background:#1765bd;color:#fff}
 .venue-status.off{background:#d7dee8;color:#64748b}
 .back{margin-bottom:10px;background:#eef3f8;color:#1765bd}
+.refresh-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 10px}.refresh-btn{background:#1765bd;color:#fff}.refresh-row .note{margin-top:0}
 .race-head h1{margin:0;font-size:22px}.race-head p{margin:4px 0 0;color:var(--muted);font-size:12px;font-weight:800}
 .event-day-badge{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:4px 9px;border-radius:7px;background:#1765bd;color:#fff;font-size:14px;font-weight:950;line-height:1}
 .lane{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:10px;border:1px solid;font-weight:950}

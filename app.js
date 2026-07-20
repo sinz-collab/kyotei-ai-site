@@ -173,6 +173,21 @@ async function openVenue(slug, route = {}) {
   renderRace();
 }
 
+async function refreshCurrentVenue() {
+  if (!currentVenueSlug) return;
+  const raceNo = currentRaceNo;
+  const pane = currentPane;
+  try {
+    $("syncState").textContent = "更新中";
+    manifest = await fetchJson("manifest.json");
+    await openVenue(currentVenueSlug, { race: raceNo, pane });
+    $("syncState").textContent = "更新済";
+  } catch (err) {
+    $("syncState").textContent = "ERROR";
+    $("pane").insertAdjacentHTML("afterbegin", `<div class="error">最新データを読み込めませんでした。<br>${esc(err.message)}</div>`);
+  }
+}
+
 function showView(view) {
   $("topView").hidden = view !== "top";
   $("raceView").hidden = view !== "race";
@@ -587,6 +602,7 @@ function renderRealtime() {
   const hasLast = Object.keys(last).length > 0;
   const hasOriginal = Object.keys(original).length > 0;
   return `<div class="card"><h2>直前情報</h2>
+      <div class="refresh-row"><button class="refresh-btn" onclick="refreshCurrentVenue()">最新の直前・展示を反映</button><span class="note">取得済みのLIVE JSONを再読み込みします。</span></div>
       <div class="note">天候 ${safe(weather.weather)} / 風向 ${safe(windDirection)} / 風速 ${safe(windSpeed)}m / 波 ${safe(waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
       ${hasLast ? `<table><tr><th>枠</th><th>展示</th><th>ST</th><th>チルト</th><th>部品</th></tr>
         ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(firstValue(last[n]?.time, last[n]?.displayTime), valueRankClass(last, n, firstValue(last[n]?.time, "") !== "" ? "time" : "displayTime"))}</td><td>${safe(firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST))}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
