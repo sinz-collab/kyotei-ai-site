@@ -13,6 +13,8 @@ let currentVenueSlug = "";
 let currentRaceNo = 1;
 let currentPane = "entry";
 let ticketMode = "ai";
+const LOCAL_REALTIME_API = window.KYOTEI_LOCAL_REALTIME_API || "http://127.0.0.1:8765";
+const LOCAL_REALTIME_TOKEN = window.KYOTEI_LOCAL_REALTIME_TOKEN || "sinz-local-realtime";
 
 const $ = (id) => document.getElementById(id);
 const safe = (v, fallback = "-") => (v === undefined || v === null || v === "" ? fallback : v);
@@ -185,6 +187,33 @@ async function refreshCurrentVenue() {
   } catch (err) {
     $("syncState").textContent = "ERROR";
     $("pane").insertAdjacentHTML("afterbegin", `<div class="error">最新データを読み込めませんでした。<br>${esc(err.message)}</div>`);
+  }
+}
+
+async function fetchRealtimeNow() {
+  if (!currentVenueSlug) return;
+  const raceNo = currentRaceNo;
+  const pane = currentPane;
+  const date = currentPayload?.date || manifest?.date || "";
+  try {
+    $("syncState").textContent = "取得中";
+    const res = await fetch(`${LOCAL_REALTIME_API}/fetch`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "X-Kyotei-Token": LOCAL_REALTIME_TOKEN},
+      body: JSON.stringify({venue: currentVenueSlug, race: raceNo, date}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || data.stage || `${res.status} ${res.statusText}`);
+    }
+    $("syncState").textContent = "反映中";
+    manifest = await fetchJson("manifest.json");
+    await openVenue(currentVenueSlug, { race: raceNo, pane });
+    $("syncState").textContent = "反映済";
+  } catch (err) {
+    $("syncState").textContent = "再読込";
+    await refreshCurrentVenue();
+    $("pane").insertAdjacentHTML("afterbegin", `<div class="note">ローカル取得APIが使えないため、公開済みJSONだけ再読み込みしました。${esc(err.message)}</div>`);
   }
 }
 
@@ -602,7 +631,7 @@ function renderRealtime() {
   const hasLast = Object.keys(last).length > 0;
   const hasOriginal = Object.keys(original).length > 0;
   return `<div class="card"><h2>直前情報</h2>
-      <div class="refresh-row"><button class="refresh-btn" onclick="refreshCurrentVenue()">最新の直前・展示を反映</button><span class="note">取得済みのLIVE JSONを再読み込みします。</span></div>
+      <div class="refresh-row"><button class="refresh-btn" onclick="fetchRealtimeNow()">Boatersから直前・展示を取得して反映</button><button onclick="refreshCurrentVenue()">JSONだけ再読み込み</button><span class="note">PC側のローカルAPIが起動中なら取得から公開まで実行します。</span></div>
       <div class="note">天候 ${safe(weather.weather)} / 風向 ${safe(windDirection)} / 風速 ${safe(windSpeed)}m / 波 ${safe(waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
       ${hasLast ? `<table><tr><th>枠</th><th>展示</th><th>ST</th><th>チルト</th><th>部品</th></tr>
         ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(firstValue(last[n]?.time, last[n]?.displayTime), valueRankClass(last, n, firstValue(last[n]?.time, "") !== "" ? "time" : "displayTime"))}</td><td>${safe(firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST))}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
