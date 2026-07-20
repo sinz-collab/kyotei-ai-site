@@ -551,17 +551,6 @@ function timeBadge(value, cls = "") {
   return `<span class="time-badge ${cls}">${safe(value)}</span>`;
 }
 
-function originalSumDiff(original, laneNo) {
-  const existing = firstValue(original[laneNo]?.sum_diff, original[laneNo]?.diff);
-  if (existing !== undefined) return existing;
-  const sums = [1,2,3,4,5,6].map((n) => num(original[n]?.sum, NaN)).filter(Number.isFinite);
-  const current = num(original[laneNo]?.sum, NaN);
-  if (!sums.length || !Number.isFinite(current)) return "";
-  const avg = sums.reduce((a, b) => a + b, 0) / sums.length;
-  const diff = avg - current;
-  return `${diff >= 0 ? "+" : ""}${diff.toFixed(2)}`;
-}
-
 function renderSlit(realtime) {
   const last = rowMap(realtime.last || realtime.lastMinute || realtime.before || realtime.direct || realtime.slit || realtime.start || realtime.st || []);
   const rows = Object.keys(last).length ? [1,2,3,4,5,6].filter((n) => last[n]) : [];
@@ -605,7 +594,7 @@ function renderRealtime() {
       ${renderSlit(rt)}
       <h3>オリジナル展示</h3>
       ${hasOriginal ? `<table><tr><th>枠</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
-        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(original[n]?.lap, valueRankClass(original, n, "lap"))}</td><td>${timeBadge(original[n]?.turn, valueRankClass(original, n, "turn"))}</td><td>${timeBadge(original[n]?.line || original[n]?.straight, valueRankClass(original, n, original[n]?.line ? "line" : "straight"))}</td><td>${timeBadge(original[n]?.show || original[n]?.display, valueRankClass(original, n, original[n]?.show ? "show" : "display"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(originalSumDiff(original, n))}</td></tr>`).join("")}
+        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(original[n]?.lap, valueRankClass(original, n, "lap"))}</td><td>${timeBadge(original[n]?.turn, valueRankClass(original, n, "turn"))}</td><td>${timeBadge(original[n]?.line || original[n]?.straight, valueRankClass(original, n, original[n]?.line ? "line" : "straight"))}</td><td>${timeBadge(original[n]?.show || original[n]?.display, valueRankClass(original, n, original[n]?.show ? "show" : "display"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(firstValue(original[n]?.sum_diff, original[n]?.diff))}</td></tr>`).join("")}
       </table>` : `<div class="note">オリジナル展示はまだ未取得です。</div>`}
     </div>
     <div class="card"><h2>水面気象</h2>
