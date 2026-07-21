@@ -146,8 +146,15 @@ async function init() {
     const route = parseRoute();
     if (route.venue) await openVenue(route.venue, route);
   } catch (err) {
+    if (status) {
+      status.className = "action-status error";
+      status.textContent = `反映できませんでした。公開済みJSONだけ再読み込みします。${err.message}`;
+    }
     $("syncState").textContent = "ERROR";
     $("venueGrid").innerHTML = `<div class="error">JSONを読み込めませんでした。<br>${err.message}<br><span class="note">config.js の KYOTEI_DATA_BASE を確認してください。</span></div>`;
+  } finally {
+    const currentButton = $("fetchRealtimeButton");
+    if (currentButton) currentButton.disabled = false;
   }
 }
 
@@ -193,8 +200,17 @@ async function refreshCurrentVenue() {
   const pane = currentPane;
   try {
     $("syncState").textContent = "更新中";
+    if (status) {
+      status.className = "action-status running";
+      status.textContent = "取得完了。公開JSONを再読み込みしています。";
+    }
     manifest = await fetchJson("manifest.json");
     await openVenue(currentVenueSlug, { race: raceNo, pane });
+    const refreshedStatus = $("realtimeActionStatus");
+    if (refreshedStatus) {
+      refreshedStatus.className = "action-status success";
+      refreshedStatus.textContent = "反映完了しました。表示を更新済みです。";
+    }
     $("syncState").textContent = "更新済";
   } catch (err) {
     $("syncState").textContent = "ERROR";
@@ -207,7 +223,14 @@ async function fetchRealtimeNow() {
   const raceNo = currentRaceNo;
   const pane = currentPane;
   const date = currentPayload?.date || manifest?.date || "";
+  const status = $("realtimeActionStatus");
+  const button = $("fetchRealtimeButton");
   try {
+    if (button) button.disabled = true;
+    if (status) {
+      status.className = "action-status running";
+      status.textContent = "取得・反映中です。完了まで1分ほどかかることがあります。";
+    }
     $("syncState").textContent = "取得中";
     const res = await fetch(`${localRealtimeApi()}/fetch`, {
       method: "POST",
@@ -643,7 +666,8 @@ function renderRealtime() {
   const hasLast = Object.keys(last).length > 0;
   const hasOriginal = Object.keys(original).length > 0;
   return `<div class="card"><h2>直前情報</h2>
-      <div class="refresh-row"><button class="refresh-btn" onclick="fetchRealtimeNow()">直前・展示を取得して反映</button><button onclick="refreshCurrentVenue()">JSONだけ再読み込み</button><button onclick="setLocalRealtimeApi()">API設定</button><span class="note">PC側のローカルAPIが起動中なら取得から公開まで実行します。</span></div>
+      <div class="refresh-row"><button id="fetchRealtimeButton" class="refresh-btn" onclick="fetchRealtimeNow()">直前・展示を取得して反映</button><button onclick="refreshCurrentVenue()">JSONだけ再読み込み</button><button onclick="setLocalRealtimeApi()">API設定</button><span class="note">PC側のローカルAPIが起動中なら取得から公開まで実行します。</span></div>
+      <div id="realtimeActionStatus" class="action-status idle">ボタンを押すと取得・反映状況をここに表示します。</div>
       <div class="note">天候 ${safe(weather.weather)} / 風向 ${safe(windDirection)} / 風速 ${safe(windSpeed)}m / 波 ${safe(waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
       ${hasLast ? `<table><tr><th>枠</th><th>展示</th><th>ST</th><th>チルト</th><th>部品</th></tr>
         ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(firstValue(last[n]?.time, last[n]?.displayTime), valueRankClass(last, n, firstValue(last[n]?.time, "") !== "" ? "time" : "displayTime"))}</td><td>${safe(firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST))}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
