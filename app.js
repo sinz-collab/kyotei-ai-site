@@ -1,4 +1,4 @@
-const DEFAULT_DATA_BASES = [
+﻿const DEFAULT_DATA_BASES = [
   "../../kyotei-ai-data/data",
   "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/main/data",
 ];
@@ -146,18 +146,10 @@ async function init() {
     const route = parseRoute();
     if (route.venue) await openVenue(route.venue, route);
   } catch (err) {
-    if (status) {
-      status.className = "action-status error";
-      status.textContent = `反映できませんでした。公開済みJSONだけ再読み込みします。${err.message}`;
-    }
     $("syncState").textContent = "ERROR";
     $("venueGrid").innerHTML = `<div class="error">JSONを読み込めませんでした。<br>${err.message}<br><span class="note">config.js の KYOTEI_DATA_BASE を確認してください。</span></div>`;
-  } finally {
-    const currentButton = $("fetchRealtimeButton");
-    if (currentButton) currentButton.disabled = false;
   }
 }
-
 function renderTop() {
   $("dateTitle").textContent = `${manifest.date || ""} のレース`;
   $("venueGrid").innerHTML = (manifest.venues || []).map((v) => {
@@ -200,17 +192,8 @@ async function refreshCurrentVenue() {
   const pane = currentPane;
   try {
     $("syncState").textContent = "更新中";
-    if (status) {
-      status.className = "action-status running";
-      status.textContent = "取得完了。公開JSONを再読み込みしています。";
-    }
     manifest = await fetchJson("manifest.json");
     await openVenue(currentVenueSlug, { race: raceNo, pane });
-    const refreshedStatus = $("realtimeActionStatus");
-    if (refreshedStatus) {
-      refreshedStatus.className = "action-status success";
-      refreshedStatus.textContent = "反映完了しました。表示を更新済みです。";
-    }
     $("syncState").textContent = "更新済";
   } catch (err) {
     $("syncState").textContent = "ERROR";
@@ -241,17 +224,32 @@ async function fetchRealtimeNow() {
     if (!res.ok || !data.ok) {
       throw new Error(data.error || data.stage || `${res.status} ${res.statusText}`);
     }
+    if (status) {
+      status.className = "action-status running";
+      status.textContent = "取得完了。公開JSONを再読み込みしています。";
+    }
     $("syncState").textContent = "反映中";
     manifest = await fetchJson("manifest.json");
     await openVenue(currentVenueSlug, { race: raceNo, pane });
     $("syncState").textContent = "反映済";
+    const refreshedStatus = $("realtimeActionStatus");
+    if (refreshedStatus) {
+      refreshedStatus.className = "action-status success";
+      refreshedStatus.textContent = "反映完了しました。表示を更新済みです。";
+    }
   } catch (err) {
+    if (status) {
+      status.className = "action-status error";
+      status.textContent = `反映できませんでした。公開済みJSONだけ再読み込みします。${err.message}`;
+    }
     $("syncState").textContent = "再読込";
     await refreshCurrentVenue();
     $("pane").insertAdjacentHTML("afterbegin", `<div class="note">ローカル取得APIが使えないため、公開済みJSONだけ再読み込みしました。${esc(err.message)}<br>スマホの場合は「API設定」でPCのIPを使ってください。例: http://192.168.3.8:8765</div>`);
+  } finally {
+    const currentButton = $("fetchRealtimeButton");
+    if (currentButton) currentButton.disabled = false;
   }
 }
-
 function showView(view) {
   $("topView").hidden = view !== "top";
   $("raceView").hidden = view !== "race";
@@ -865,3 +863,4 @@ document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => {
 $("backTop").onclick = () => showView("top");
 
 init();
+
