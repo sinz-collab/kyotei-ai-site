@@ -643,7 +643,7 @@ function renderRealtime() {
   const hasLast = Object.keys(last).length > 0;
   const hasOriginal = Object.keys(original).length > 0;
   return `<div class="card"><h2>直前情報</h2>
-      <div class="refresh-row"><button class="refresh-btn" onclick="fetchRealtimeNow()">Boatersから直前・展示を取得して反映</button><button onclick="refreshCurrentVenue()">JSONだけ再読み込み</button><button onclick="setLocalRealtimeApi()">API設定</button><span class="note">PC側のローカルAPIが起動中なら取得から公開まで実行します。</span></div>
+      <div class="refresh-row"><button class="refresh-btn" onclick="fetchRealtimeNow()">直前・展示を取得して反映</button><button onclick="refreshCurrentVenue()">JSONだけ再読み込み</button><button onclick="setLocalRealtimeApi()">API設定</button><span class="note">PC側のローカルAPIが起動中なら取得から公開まで実行します。</span></div>
       <div class="note">天候 ${safe(weather.weather)} / 風向 ${safe(windDirection)} / 風速 ${safe(windSpeed)}m / 波 ${safe(waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
       ${hasLast ? `<table><tr><th>枠</th><th>展示</th><th>ST</th><th>チルト</th><th>部品</th></tr>
         ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(firstValue(last[n]?.time, last[n]?.displayTime), valueRankClass(last, n, firstValue(last[n]?.time, "") !== "" ? "time" : "displayTime"))}</td><td>${safe(firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST))}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
