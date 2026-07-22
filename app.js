@@ -13,6 +13,7 @@ let currentVenueSlug = "";
 let currentRaceNo = 1;
 let currentPane = "entry";
 let ticketMode = "ai";
+let realtimeActionState = { cls: "idle", text: "ボタンを押すと取得・反映状況をここに表示します。" };
 const DEFAULT_LOCAL_REALTIME_API = window.KYOTEI_LOCAL_REALTIME_API || "http://127.0.0.1:8765";
 const LOCAL_REALTIME_TOKEN = window.KYOTEI_LOCAL_REALTIME_TOKEN || "sinz-local-realtime";
 
@@ -26,6 +27,15 @@ function setLocalRealtimeApi() {
   if (!next) return;
   localStorage.setItem("KYOTEI_LOCAL_REALTIME_API", next.replace(/\/$/, ""));
   $("syncState").textContent = "API設定済";
+}
+
+function setRealtimeActionStatus(cls, text) {
+  realtimeActionState = { cls, text };
+  const status = $("realtimeActionStatus");
+  if (status) {
+    status.className = `action-status ${cls}`;
+    status.textContent = text;
+  }
 }
 
 const $ = (id) => document.getElementById(id);
@@ -206,14 +216,10 @@ async function fetchRealtimeNow() {
   const raceNo = currentRaceNo;
   const pane = currentPane;
   const date = currentPayload?.date || manifest?.date || "";
-  const status = $("realtimeActionStatus");
   const button = $("fetchRealtimeButton");
   try {
     if (button) button.disabled = true;
-    if (status) {
-      status.className = "action-status running";
-      status.textContent = "取得・反映中です。完了まで1分ほどかかることがあります。";
-    }
+    setRealtimeActionStatus("running", "取得・反映中です。完了まで1分ほどかかることがあります。");
     $("syncState").textContent = "取得中";
     const res = await fetch(`${localRealtimeApi()}/fetch`, {
       method: "POST",
@@ -224,24 +230,14 @@ async function fetchRealtimeNow() {
     if (!res.ok || !data.ok) {
       throw new Error(data.error || data.stage || `${res.status} ${res.statusText}`);
     }
-    if (status) {
-      status.className = "action-status running";
-      status.textContent = "取得完了。公開JSONを再読み込みしています。";
-    }
+    setRealtimeActionStatus("running", "取得完了。公開JSONを再読み込みしています。");
     $("syncState").textContent = "反映中";
     manifest = await fetchJson("manifest.json");
     await openVenue(currentVenueSlug, { race: raceNo, pane });
     $("syncState").textContent = "反映済";
-    const refreshedStatus = $("realtimeActionStatus");
-    if (refreshedStatus) {
-      refreshedStatus.className = "action-status success";
-      refreshedStatus.textContent = "反映完了しました。表示を更新済みです。";
-    }
+    setRealtimeActionStatus("success", "反映完了しました。表示を更新済みです。");
   } catch (err) {
-    if (status) {
-      status.className = "action-status error";
-      status.textContent = `反映できませんでした。公開済みJSONだけ再読み込みします。${err.message}`;
-    }
+    setRealtimeActionStatus("error", `反映できませんでした。公開済みJSONだけ再読み込みします。${err.message}`);
     $("syncState").textContent = "再読込";
     await refreshCurrentVenue();
     $("pane").insertAdjacentHTML("afterbegin", `<div class="note">ローカル取得APIが使えないため、公開済みJSONだけ再読み込みしました。${esc(err.message)}<br>スマホの場合は「API設定」でPCのIPを使ってください。例: http://192.168.3.8:8765</div>`);
@@ -665,7 +661,7 @@ function renderRealtime() {
   const hasOriginal = Object.keys(original).length > 0;
   return `<div class="card"><h2>直前情報</h2>
       <div class="refresh-row"><button id="fetchRealtimeButton" class="refresh-btn" onclick="fetchRealtimeNow()">直前・展示を取得して反映</button><button onclick="refreshCurrentVenue()">JSONだけ再読み込み</button><button onclick="setLocalRealtimeApi()">API設定</button><span class="note">PC側のローカルAPIが起動中なら取得から公開まで実行します。</span></div>
-      <div id="realtimeActionStatus" class="action-status idle">ボタンを押すと取得・反映状況をここに表示します。</div>
+      <div id="realtimeActionStatus" class="action-status ${realtimeActionState.cls}">${esc(realtimeActionState.text)}</div>
       <div class="note">天候 ${safe(weather.weather)} / 風向 ${safe(windDirection)} / 風速 ${safe(windSpeed)}m / 波 ${safe(waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
       ${hasLast ? `<table><tr><th>枠</th><th>展示</th><th>ST</th><th>チルト</th><th>部品</th></tr>
         ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(firstValue(last[n]?.time, last[n]?.displayTime), valueRankClass(last, n, firstValue(last[n]?.time, "") !== "" ? "time" : "displayTime"))}</td><td>${safe(firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST))}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
