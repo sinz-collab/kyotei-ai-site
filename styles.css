@@ -14,6 +14,7 @@ body{margin:0;background:var(--bg);color:var(--ink)}
 .pill{padding:6px 10px;border-radius:999px;background:#eef3f8;color:#526071;font-size:12px}
 .tabs,.subnav,.race-tabs{display:flex;gap:7px;overflow-x:auto;padding:9px 10px;background:#f7f9fb;scrollbar-width:none}
 .tabs::-webkit-scrollbar,.subnav::-webkit-scrollbar,.race-tabs::-webkit-scrollbar{display:none}
+.race-tabs{flex-wrap:wrap;overflow-x:visible}
 button{font-family:inherit;border:0;border-radius:999px;background:#fff;color:#526071;padding:9px 12px;font-weight:950;white-space:nowrap;box-shadow:0 2px 8px rgba(15,39,66,.04)}
 button.active{background:var(--navy);color:#fff}
 .race-tabs button.closed:not(.active){background:#e5e7eb;color:#94a3b8;box-shadow:none}
