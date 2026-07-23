@@ -6,11 +6,6 @@ const DATA_BASES = (Array.isArray(window.KYOTEI_DATA_BASES) && window.KYOTEI_DAT
   ? window.KYOTEI_DATA_BASES
   : (window.KYOTEI_DATA_BASE ? [window.KYOTEI_DATA_BASE] : DEFAULT_DATA_BASES)
 ).map((base) => String(base).replace(/\/$/, ""));
-const LIVE_DATA_BASES = (
-  Array.isArray(window.KYOTEI_LIVE_DATA_BASES) && window.KYOTEI_LIVE_DATA_BASES.length
-    ? window.KYOTEI_LIVE_DATA_BASES
-    : DATA_BASES.map((base) => `${base}/live`)
-).map((base) => String(base).replace(/\/$/, ""));
 
 let manifest = null;
 let currentPayload = null;
@@ -18,7 +13,6 @@ let currentVenueSlug = "";
 let currentRaceNo = 1;
 let currentPane = "entry";
 let ticketMode = "ai";
-let liveRefreshTimer = null;
 let realtimeActionState = { cls: "idle", text: "ボタンを押すと取得・反映状況をここに表示します。" };
 const DEFAULT_LOCAL_REALTIME_API = window.KYOTEI_LOCAL_REALTIME_API || "http://127.0.0.1:8765";
 const LOCAL_REALTIME_TOKEN = window.KYOTEI_LOCAL_REALTIME_TOKEN || "sinz-local-realtime";
@@ -128,124 +122,6 @@ async function fetchJson(path) {
   throw lastError || new Error(`failed to load ${path}`);
 }
 
-async function fetchLiveJson(path) {
-  let lastError = null;
-  const cleanPath = String(path).replace(/^\//, "");
-  for (const base of LIVE_DATA_BASES) {
-    try {
-      const res = await fetch(`${base}/${cleanPath}?t=${Date.now()}`, { cache: "no-store" });
-      if (res.status === 404) continue;
-      if (!res.ok) {
-        lastError = new Error(`${res.status} ${res.statusText}: ${path}`);
-        continue;
-      }
-      return await res.json();
-    } catch (err) {
-      lastError = err;
-    }
-  }
-  if (lastError) throw lastError;
-  return null;
-}
-
-function validLiveDocument(document) {
-  return document
-    && document.date === currentPayload?.date
-    && document.venue === currentVenueSlug
-    && Number(document.race_no) === Number(currentRaceNo)
-    && document.status !== "fetch_error"
-    && document.status !== "parse_error"
-    && document.status !== "cancelled"
-    && document.data;
-}
-
-async function loadLiveRace() {
-  if (!currentPayload || !currentVenueSlug) return;
-  const date = currentPayload.date;
-  const raceNo = String(currentRaceNo).padStart(2, "0");
-  const root = `${date}/${currentVenueSlug}/${raceNo}`;
-  const names = ["direct", "exhibition", "original_exhibition", "odds"];
-  const documents = {};
-  await Promise.all(names.map(async (name) => {
-    try {
-      documents[name] = await fetchLiveJson(`${root}/${name}.json`);
-    } catch (_) {
-      documents[name] = null;
-    }
-  }));
-  const prediction = pred();
-  const realtime = { ...(prediction.realtime || {}) };
-  const direct = documents.direct;
-  const exhibition = documents.exhibition;
-  const original = documents.original_exhibition;
-  const odds = documents.odds;
-
-  if (validLiveDocument(direct)) {
-    const weather = direct.data || {};
-    realtime.weather = {
-      weather: weather.weather,
-      air: weather.air_temperature,
-      water: weather.water_temperature,
-      windDirection: weather.wind_direction,
-      wind: weather.wind_speed,
-      wave: weather.wave_height,
-      stabilizer: weather.stabilizer,
-      lapShortened: weather.lap_shortened,
-    };
-  }
-  const directRacers = Object.fromEntries(
-    (validLiveDocument(direct) ? (direct.data.racers || []) : [])
-      .map((row) => [String(row.lane), row])
-  );
-  if (validLiveDocument(exhibition)) {
-    realtime.last = Object.fromEntries((exhibition.data.entries || []).map((row) => [
-      String(row.lane),
-      {
-        time: row.exhibition_time,
-        time_rank: row.exhibition_rank,
-        st: row.start_time,
-        st_rank: row.start_rank,
-        st_raw: row.start_raw,
-        start_course: row.exhibition_course,
-        tilt: row.tilt ?? directRacers[String(row.lane)]?.tilt,
-        weight: directRacers[String(row.lane)]?.weight,
-        adjust: directRacers[String(row.lane)]?.weight_adjustment,
-        part: directRacers[String(row.lane)]?.parts_exchange,
-      },
-    ]));
-  }
-  if (validLiveDocument(original)) {
-    realtime.original = Object.fromEntries((original.data.entries || []).map((row) => [
-      String(row.lane),
-      {
-        lap: row.lap_time,
-        turn: row.turn_time,
-        line: row.straight_time,
-        sum: row.sum,
-        sum_diff: row.sum_difference,
-      },
-    ]));
-  }
-  prediction.realtime = realtime;
-  if (validLiveDocument(odds)) {
-    prediction.odds = { ...(prediction.odds || {}), ...(odds.data.odds || {}) };
-  }
-}
-
-function startLiveRefresh() {
-  if (liveRefreshTimer) clearInterval(liveRefreshTimer);
-  liveRefreshTimer = setInterval(async () => {
-    if (document.hidden || !currentVenueSlug || !currentPayload) return;
-    try {
-      await loadLiveRace();
-      renderPane();
-      $("syncState").textContent = "LIVE JSON";
-    } catch (_) {
-      $("syncState").textContent = "LIVE待機";
-    }
-  }, 4 * 60 * 1000);
-}
-
 function parseRoute() {
   const raw = location.hash.replace(/^#/, "");
   if (!raw) return {};
@@ -331,9 +207,6 @@ async function openVenue(slug, route = {}) {
   $("syncState").textContent = "LIVE JSON";
   showView("race");
   renderRace();
-  await loadLiveRace();
-  renderPane();
-  startLiveRefresh();
 }
 
 async function refreshCurrentVenue() {
@@ -390,11 +263,7 @@ function showView(view) {
   $("topView").hidden = view !== "top";
   $("raceView").hidden = view !== "race";
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
-  if (view === "top") {
-    if (liveRefreshTimer) clearInterval(liveRefreshTimer);
-    liveRefreshTimer = null;
-    clearRoute();
-  }
+  if (view === "top") clearRoute();
 }
 
 function race() {
@@ -416,17 +285,10 @@ function renderRace() {
   const dayLabel = eventDayLabel();
   $("venueMeta").innerHTML = `${esc(currentPayload.date || "")} ${dayLabel ? `<span class="event-day-badge">${esc(dayLabel)}</span>` : ""}<br>締切 ${esc(r.deadline || "-")} / ${esc(currentPayload.engine || "")}`;
   $("raceTabs").innerHTML = (currentPayload.races || []).map((x) =>
-    `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="selectRace(${x.race})">${x.race}R</button>`
+    `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="currentRaceNo=${x.race};renderRace()">${x.race}R</button>`
   ).join("");
   document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x.dataset.pane === currentPane));
   updateRoute();
-  renderPane();
-}
-
-async function selectRace(raceNo) {
-  currentRaceNo = Number(raceNo);
-  renderRace();
-  await loadLiveRace();
   renderPane();
 }
 
