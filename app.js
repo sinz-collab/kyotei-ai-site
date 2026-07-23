@@ -180,15 +180,28 @@ function renderTop() {
 
 async function openVenue(slug, route = {}) {
   const v = manifest.venues.find((x) => x.slug === slug);
-  if (!v) return;
+  if (!v || !v.open || Number(v.entryCount) !== 12 || !v.dataPath) {
+    currentPayload = null;
+    currentVenueSlug = "";
+    showView("top");
+    history.replaceState(null, "", `${location.pathname}${location.search}`);
+    return;
+  }
   $("syncState").textContent = "FETCH";
-  currentPayload = await fetchJson(v.dataPath || v.latestPath);
+  const payload = await fetchJson(v.dataPath);
+  const races = Array.isArray(payload.races) ? payload.races : [];
+  const complete = races.length === 12 && races.every((race) =>
+    Array.isArray(race.racers) && race.racers.length === 6
+  );
+  if (payload.date !== manifest.date || payload.date !== v.date || !complete) {
+    throw new Error(`公開データ検証エラー: ${v.name}`);
+  }
+  currentPayload = payload;
   currentVenueSlug = slug;
   currentPayload.venue = currentPayload.venue || v.name;
   currentPayload.date = currentPayload.date || v.date || manifest.date;
   currentPayload.eventDayLabel = currentPayload.eventDayLabel || v.eventDayLabel || "";
   currentPayload.eventDay = currentPayload.eventDay || v.eventDay || "";
-  const races = currentPayload.races || [];
   currentRaceNo = races.some((r) => Number(r.race) === Number(route.race)) ? Number(route.race) : (races[0]?.race || 1);
   currentPane = ["entry", "compare", "realtime", "tide", "odds", "prediction", "logs", "result"].includes(route.pane) ? route.pane : "entry";
   $("syncState").textContent = "LIVE JSON";
