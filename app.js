@@ -321,6 +321,83 @@ function applyLivePredictionReview(prediction, documents) {
   return true;
 }
 
+function normalizedExhibitionTime(value) {
+  if (value === undefined || value === null || value === "" || value === "-") return null;
+  const parsed = Number(String(value).trim());
+  return Number.isFinite(parsed) && parsed >= 5 && parsed < 10
+    ? Math.round(parsed * 100) / 100
+    : null;
+}
+
+function exhibitionTimeFromRow(row) {
+  if (!row) return null;
+  for (const key of [
+    "exhibition_time", "exhibitionTime", "display_time", "displayTime",
+    "tenji_time", "tenjiTime", "show", "display", "time",
+  ]) {
+    const value = normalizedExhibitionTime(row[key]);
+    if (value !== null) return value;
+  }
+  return null;
+}
+
+function positiveNumber(value) {
+  if (value === undefined || value === null || value === "" || value === "-") return null;
+  const parsed = Number(String(value).trim());
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function mergeOriginalExhibitionRows(existingOriginal, originalEntries, exhibitionEntries) {
+  const current = existingOriginal && typeof existingOriginal === "object" ? existingOriginal : {};
+  const originalByLane = Object.fromEntries((originalEntries || []).map((row) => [String(row.lane), row]));
+  const exhibitionByLane = Object.fromEntries((exhibitionEntries || []).map((row) => [String(row.lane), row]));
+  const merged = {};
+
+  for (let laneNo = 1; laneNo <= 6; laneNo += 1) {
+    const key = String(laneNo);
+    const previous = current[key] || current[laneNo] || {};
+    const original = originalByLane[key] || {};
+    const exhibition = exhibitionByLane[key] || {};
+    const exhibitionTime = exhibitionTimeFromRow(exhibition)
+      ?? exhibitionTimeFromRow({ exhibition_time: original.sum_exhibition })
+      ?? exhibitionTimeFromRow(previous);
+    const lap = firstValue(original.lap_time, previous.lap);
+    const lapNumber = positiveNumber(lap);
+    const sourceSum = positiveNumber(original.sum);
+    const calculatedSum = lapNumber !== null && exhibitionTime !== null
+      ? Math.round((lapNumber + exhibitionTime) * 100) / 100
+      : null;
+    const sum = sourceSum !== null
+      ? sourceSum
+      : (calculatedSum !== null ? calculatedSum : firstValue(previous.sum, null));
+    merged[key] = {
+      ...previous,
+      lap,
+      turn: firstValue(original.turn_time, previous.turn),
+      line: firstValue(original.straight_time, previous.line, previous.straight),
+      exhibition_time: exhibitionTime,
+      exhibition_rank: firstValue(exhibition.exhibition_rank, previous.exhibition_rank),
+      exhibition_gap: firstValue(exhibition.exhibition_gap, previous.exhibition_gap),
+      show: exhibitionTime,
+      sum,
+    };
+  }
+
+  const validSums = Object.values(merged)
+    .map((row) => positiveNumber(row.sum))
+    .filter((value) => value !== null);
+  if (validSums.length) {
+    const average = validSums.reduce((total, value) => total + value, 0) / validSums.length;
+    for (const row of Object.values(merged)) {
+      const sum = positiveNumber(row.sum);
+      row.sum_diff = sum !== null
+        ? (average - sum).toFixed(2)
+        : firstValue(row.sum_diff, row.diff, null);
+    }
+  }
+  return merged;
+}
+
 async function loadLiveRace() {
   if (!currentPayload || !currentVenueSlug) return;
   const date = currentPayload.date;
@@ -342,6 +419,7 @@ async function loadLiveRace() {
   const original = documents.original_exhibition;
   const odds = documents.odds;
   const result = documents.result;
+  realtime.exhibitionStatus = exhibition?.status || realtime.exhibitionStatus || "missing";
 
   if (validLiveDocument(direct, "direct")) {
     const weather = direct.data || {};
@@ -364,7 +442,7 @@ async function loadLiveRace() {
     realtime.last = Object.fromEntries((exhibition.data.entries || []).map((row) => [
       String(row.lane),
       {
-        time: row.exhibition_time,
+        time: exhibitionTimeFromRow(row),
         time_rank: row.exhibition_rank,
         st: row.start_time,
         st_rank: row.start_rank,
@@ -377,17 +455,15 @@ async function loadLiveRace() {
       },
     ]));
   }
-  if (validLiveDocument(original, "original_exhibition")) {
-    realtime.original = Object.fromEntries((original.data.entries || []).map((row) => [
-      String(row.lane),
-      {
-        lap: row.lap_time,
-        turn: row.turn_time,
-        line: row.straight_time,
-        sum: row.sum,
-        sum_diff: row.sum_difference,
-      },
-    ]));
+  if (
+    validLiveDocument(original, "original_exhibition")
+    || validLiveDocument(exhibition, "exhibition")
+  ) {
+    realtime.original = mergeOriginalExhibitionRows(
+      realtime.original || {},
+      validLiveDocument(original, "original_exhibition") ? original.data.entries : [],
+      validLiveDocument(exhibition, "exhibition") ? exhibition.data.entries : [],
+    );
   }
   prediction.realtime = realtime;
   if (validLiveDocument(odds, "odds")) {
@@ -970,6 +1046,14 @@ function timeBadge(value, cls = "") {
   return `<span class="time-badge ${cls}">${safe(value)}</span>`;
 }
 
+function exhibitionCell(row, status, cls = "") {
+  const value = exhibitionTimeFromRow(row);
+  if (value !== null) return timeBadge(value.toFixed(2), cls);
+  if (["pending", "partial"].includes(status)) return timeBadge("未公開");
+  if (["fetch_error", "parse_error"].includes(status)) return timeBadge("取得エラー");
+  return timeBadge("-");
+}
+
 function renderSlit(realtime) {
   const last = rowMap(realtime.last || realtime.lastMinute || realtime.before || realtime.direct || realtime.slit || realtime.start || realtime.st || []);
   const rows = Object.keys(last).length ? [1,2,3,4,5,6].filter((n) => last[n]) : [];
@@ -1015,7 +1099,7 @@ function renderRealtime() {
       ${renderSlit(rt)}
       <h3>オリジナル展示</h3>
       ${hasOriginal ? `<table><tr><th>枠</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
-        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(original[n]?.lap, valueRankClass(original, n, "lap"))}</td><td>${timeBadge(original[n]?.turn, valueRankClass(original, n, "turn"))}</td><td>${timeBadge(original[n]?.line || original[n]?.straight, valueRankClass(original, n, original[n]?.line ? "line" : "straight"))}</td><td>${timeBadge(original[n]?.show || original[n]?.display, valueRankClass(original, n, original[n]?.show ? "show" : "display"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(firstValue(original[n]?.sum_diff, original[n]?.diff))}</td></tr>`).join("")}
+        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(original[n]?.lap, valueRankClass(original, n, "lap"))}</td><td>${timeBadge(original[n]?.turn, valueRankClass(original, n, "turn"))}</td><td>${timeBadge(original[n]?.line || original[n]?.straight, valueRankClass(original, n, original[n]?.line ? "line" : "straight"))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, "exhibition_time"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(firstValue(original[n]?.sum_diff, original[n]?.diff))}</td></tr>`).join("")}
       </table>` : `<div class="note">オリジナル展示はまだ未取得です。</div>`}
     </div>
     <div class="card"><h2>水面気象</h2>
