@@ -172,6 +172,10 @@ function validLiveDocument(document, itemType) {
     return document.data.odds
       && Object.keys(document.data.odds).length > 0;
   }
+  if (itemType === "result") {
+    return Array.isArray(document.data.order)
+      && document.data.order.length === 3;
+  }
   return Array.isArray(document.data.entries)
     && document.data.entries.length > 0;
 }
@@ -181,7 +185,7 @@ async function loadLiveRace() {
   const date = currentPayload.date;
   const raceNo = String(currentRaceNo).padStart(2, "0");
   const root = `${date}/${currentVenueSlug}/${raceNo}`;
-  const names = ["direct", "exhibition", "original_exhibition", "odds"];
+  const names = ["direct", "exhibition", "original_exhibition", "odds", "result"];
   const documents = {};
   await Promise.all(names.map(async (name) => {
     try {
@@ -196,6 +200,7 @@ async function loadLiveRace() {
   const exhibition = documents.exhibition;
   const original = documents.original_exhibition;
   const odds = documents.odds;
+  const result = documents.result;
 
   if (validLiveDocument(direct, "direct")) {
     const weather = direct.data || {};
@@ -246,6 +251,16 @@ async function loadLiveRace() {
   prediction.realtime = realtime;
   if (validLiveDocument(odds, "odds")) {
     prediction.odds = { ...(prediction.odds || {}), ...(odds.data.odds || {}) };
+  }
+  if (validLiveDocument(result, "result")) {
+    prediction.result = {
+      status: "ok",
+      message: "結果取得済み",
+      order: result.data.order,
+      payout3t: result.data.payout3t,
+      popularity3t: result.data.popularity3t,
+      kimarite: result.data.kimarite,
+    };
   }
 }
 
