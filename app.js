@@ -597,11 +597,15 @@ function eventDayLabel() {
   return r.eventDayLabel || currentPayload?.eventDayLabel || currentPayload?.seriesDay || "開催日目不明";
 }
 
+function predictionEngineLabel() {
+  return currentPayload?.engine || (currentVenueSlug === "toda" ? "toda_prediction_engine_20260707" : "");
+}
+
 function renderRace() {
   const r = race();
   $("venueTitle").textContent = `${currentPayload.venue || "-"} ${currentRaceNo}R`;
   const dayLabel = eventDayLabel();
-  $("venueMeta").innerHTML = `${esc(currentPayload.date || "")} ${dayLabel ? `<span class="event-day-badge">${esc(dayLabel)}</span>` : ""}<br>締切 ${esc(r.deadline || "-")} / ${esc(currentPayload.engine || "")}`;
+  $("venueMeta").innerHTML = `${esc(currentPayload.date || "")} ${dayLabel ? `<span class="event-day-badge">${esc(dayLabel)}</span>` : ""}<br>締切 ${esc(r.deadline || "-")} / ${esc(predictionEngineLabel())}`;
   $("raceTabs").innerHTML = (currentPayload.races || []).map((x) =>
     `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="selectRace(${x.race})">${x.race}R</button>`
   ).join("");
