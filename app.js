@@ -148,15 +148,32 @@ async function fetchLiveJson(path) {
   return null;
 }
 
-function validLiveDocument(document) {
-  return document
+function validLiveDocument(document, itemType) {
+  const identityMatches = document
     && document.date === currentPayload?.date
     && document.venue === currentVenueSlug
     && Number(document.race_no) === Number(currentRaceNo)
-    && document.status !== "fetch_error"
-    && document.status !== "parse_error"
-    && document.status !== "cancelled"
+    && ["partial", "complete"].includes(document.status)
     && document.data;
+  if (!identityMatches) return false;
+  if (itemType === "direct") {
+    const racers = Array.isArray(document.data.racers) ? document.data.racers : [];
+    const conditions = [
+      "weather",
+      "air_temperature",
+      "water_temperature",
+      "wind_direction",
+      "wind_speed",
+      "wave_height",
+    ];
+    return racers.length > 0 || conditions.some((key) => document.data[key] != null);
+  }
+  if (itemType === "odds") {
+    return document.data.odds
+      && Object.keys(document.data.odds).length > 0;
+  }
+  return Array.isArray(document.data.entries)
+    && document.data.entries.length > 0;
 }
 
 async function loadLiveRace() {
@@ -180,7 +197,7 @@ async function loadLiveRace() {
   const original = documents.original_exhibition;
   const odds = documents.odds;
 
-  if (validLiveDocument(direct)) {
+  if (validLiveDocument(direct, "direct")) {
     const weather = direct.data || {};
     realtime.weather = {
       weather: weather.weather,
@@ -194,10 +211,10 @@ async function loadLiveRace() {
     };
   }
   const directRacers = Object.fromEntries(
-    (validLiveDocument(direct) ? (direct.data.racers || []) : [])
+    (validLiveDocument(direct, "direct") ? (direct.data.racers || []) : [])
       .map((row) => [String(row.lane), row])
   );
-  if (validLiveDocument(exhibition)) {
+  if (validLiveDocument(exhibition, "exhibition")) {
     realtime.last = Object.fromEntries((exhibition.data.entries || []).map((row) => [
       String(row.lane),
       {
@@ -214,7 +231,7 @@ async function loadLiveRace() {
       },
     ]));
   }
-  if (validLiveDocument(original)) {
+  if (validLiveDocument(original, "original_exhibition")) {
     realtime.original = Object.fromEntries((original.data.entries || []).map((row) => [
       String(row.lane),
       {
@@ -227,7 +244,7 @@ async function loadLiveRace() {
     ]));
   }
   prediction.realtime = realtime;
-  if (validLiveDocument(odds)) {
+  if (validLiveDocument(odds, "odds")) {
     prediction.odds = { ...(prediction.odds || {}), ...(odds.data.odds || {}) };
   }
 }
