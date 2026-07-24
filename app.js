@@ -251,15 +251,21 @@ async function loadLiveRace() {
   prediction.realtime = realtime;
   if (validLiveDocument(odds, "odds")) {
     prediction.odds = { ...(prediction.odds || {}), ...(odds.data.odds || {}) };
+    prediction.oddsMeta = {
+      count: Object.keys(odds.data.odds || {}).length,
+      complete: odds.complete === true,
+      fetchedAt: odds.fetched_at,
+    };
   }
   if (validLiveDocument(result, "result")) {
     prediction.result = {
       status: "ok",
       message: "結果取得済み",
-      order: result.data.order,
+      order: Array.isArray(result.data.order) ? result.data.order.join("-") : result.data.order,
       payout3t: result.data.payout3t,
       popularity3t: result.data.popularity3t,
       kimarite: result.data.kimarite,
+      fetchedAt: result.fetched_at,
     };
   }
 }
@@ -978,6 +984,7 @@ function renderResult() {
       <div class="result-pay"><div class="paybox"><span>払戻</span><b>${safe(r.payout3t)}</b></div><div class="paybox"><span>人気</span><b>${safe(r.popularity3t)}</b></div></div>` :
       `<div class="result-line"><div class="result-label">結果待ち</div><div class="note">締切9分後から結果取得を試します。</div></div>`}
     <div class="result-sub"><div class="paybox"><span>決まり手</span><b>${safe(r.kimarite)}</b>${kimariteNote}</div><div class="paybox"><span>AI予想</span><b>${hitAi ? "的中" : "-"}</b></div><div class="paybox"><span>AI荒れ</span><b>${hitUpset ? "的中" : "-"}</b></div></div>
+    ${r.fetchedAt ? `<div class="note">結果取得: ${esc(r.fetchedAt)}</div>` : ""}
   </div>`;
 }
 
@@ -995,7 +1002,9 @@ function oddsClass(value) {
 }
 
 function renderOdds() {
-  const odds = pred().odds || {};
+  const prediction = pred();
+  const odds = prediction.odds || {};
+  const meta = prediction.oddsMeta || {};
   const entries = Object.entries(odds)
     .map(([key, value]) => ({ key, value, parts: String(key).split("-").map(Number) }))
     .filter((x) => x.parts.length === 3 && x.parts.every((n) => n >= 1 && n <= 6));
@@ -1024,7 +1033,9 @@ function renderOdds() {
       </table>
     </section>`;
   }).join("");
-  return `<div class="card odds-card"><h2>3連単オッズ</h2><div class="odds-note">1着固定で、2着ごとの3着候補を横に並べています。</div><div class="oddsboard">${panels}</div></div>`;
+  const fetched = meta.fetchedAt ? ` / 取得: ${esc(meta.fetchedAt)}` : "";
+  const completeness = meta.count ? `${meta.count}通り${meta.complete ? "・完全" : "・取得中"}` : "";
+  return `<div class="card odds-card"><h2>3連単オッズ</h2><div class="odds-note">1着固定で、2着ごとの3着候補を横に並べています。${completeness ? `<br>${completeness}${fetched}` : ""}</div><div class="oddsboard">${panels}</div></div>`;
 }
 
 function finishBoat(n) {
