@@ -180,6 +180,146 @@ function validLiveDocument(document, itemType) {
     && document.data.entries.length > 0;
 }
 
+function normalizeProbabilityMap(values) {
+  const lanes = [1, 2, 3, 4, 5, 6];
+  const positive = Object.fromEntries(lanes.map((laneNo) => [
+    String(laneNo),
+    Math.max(0.1, num(values?.[laneNo] ?? values?.[String(laneNo)], 0.1)),
+  ]));
+  const total = Object.values(positive).reduce((sum, value) => sum + value, 0);
+  const normalized = Object.fromEntries(lanes.map((laneNo) => [
+    String(laneNo),
+    Math.round((positive[String(laneNo)] / total) * 1000) / 10,
+  ]));
+  const correction = Math.round((100 - Object.values(normalized).reduce((sum, value) => sum + value, 0)) * 10) / 10;
+  const largestLane = lanes.reduce((best, laneNo) => (
+    normalized[String(laneNo)] > normalized[String(best)] ? laneNo : best
+  ), 1);
+  normalized[String(largestLane)] = Math.round((normalized[String(largestLane)] + correction) * 10) / 10;
+  return normalized;
+}
+
+function completeSixLaneRows(document, key) {
+  if (!document || document.complete !== true || document.status !== "complete") return null;
+  const rows = Array.isArray(document.data?.[key]) ? document.data[key] : [];
+  const lanes = rows.map((row) => Number(row.lane));
+  return rows.length === 6 && new Set(lanes).size === 6 && lanes.every((laneNo) => laneNo >= 1 && laneNo <= 6)
+    ? rows
+    : null;
+}
+
+function rankRows(rows, valueKey) {
+  const ranked = rows
+    .map((row) => ({ lane: Number(row.lane), value: num(row[valueKey], NaN) }))
+    .filter((row) => Number.isFinite(row.value))
+    .sort((a, b) => a.value - b.value);
+  return Object.fromEntries(ranked.map((row, index) => [String(row.lane), index + 1]));
+}
+
+function applyLivePredictionReview(prediction, documents) {
+  const directRows = completeSixLaneRows(documents.direct, "racers");
+  const exhibitionRows = completeSixLaneRows(documents.exhibition, "entries");
+  const oddsCount = documents.odds?.complete === true && documents.odds?.status === "complete"
+    ? Object.keys(documents.odds.data?.odds || {}).length
+    : 0;
+  if (!directRows || !exhibitionRows || oddsCount !== 120) return false;
+
+  const lanes = [1, 2, 3, 4, 5, 6];
+  const baseline = prediction._liveReviewBaseline || {
+    win: { ...(prediction.win || {}) },
+    second: { ...(prediction.second || {}) },
+    third: { ...(prediction.third || {}) },
+  };
+  Object.defineProperty(prediction, "_liveReviewBaseline", {
+    value: baseline,
+    writable: true,
+    configurable: true,
+    enumerable: false,
+  });
+
+  const exhibitionRanks = rankRows(exhibitionRows, "exhibition_time");
+  if (Object.keys(exhibitionRanks).length !== 6) return false;
+  const originalRows = completeSixLaneRows(documents.original_exhibition, "entries");
+  const originalRanks = originalRows ? rankRows(originalRows, "sum") : {};
+  const directByLane = Object.fromEntries(directRows.map((row) => [String(row.lane), row]));
+  const exhibitionByLane = Object.fromEntries(exhibitionRows.map((row) => [String(row.lane), row]));
+  const adjustments = {};
+
+  for (const laneNo of lanes) {
+    const key = String(laneNo);
+    const exhibition = exhibitionByLane[key] || {};
+    const direct = directByLane[key] || {};
+    const exhibitionRank = exhibitionRanks[key];
+    const rankStrength = 3.5 - exhibitionRank;
+    const course = num(exhibition.exhibition_course, laneNo);
+    const courseChange = Math.max(-2, Math.min(2, laneNo - course));
+    const partsPenalty = direct.parts_exchange ? -0.35 : 0;
+    const weightPenalty = -Math.min(0.4, Math.max(0, num(direct.weight_adjustment, 0)) * 0.1);
+    const originalStrength = originalRanks[key] ? (3.5 - originalRanks[key]) : 0;
+    adjustments[key] = {
+      win: rankStrength * 0.9 + courseChange * 0.35 + partsPenalty + weightPenalty + originalStrength * 0.25,
+      second: rankStrength * 0.55 + courseChange * 0.2 + partsPenalty * 0.5 + weightPenalty * 0.5 + originalStrength * 0.18,
+      third: rankStrength * 0.35 + courseChange * 0.1 + partsPenalty * 0.25 + weightPenalty * 0.25 + originalStrength * 0.12,
+    };
+  }
+
+  const adjusted = {};
+  for (const position of ["win", "second", "third"]) {
+    adjusted[position] = normalizeProbabilityMap(Object.fromEntries(lanes.map((laneNo) => {
+      const key = String(laneNo);
+      return [key, num(baseline[position]?.[key] ?? baseline[position]?.[laneNo], 0) + adjustments[key][position]];
+    })));
+  }
+
+  prediction.win = adjusted.win;
+  prediction.second = adjusted.second;
+  prediction.third = adjusted.third;
+  prediction.probabilityReview = Object.fromEntries(lanes.map((laneNo) => {
+    const key = String(laneNo);
+    const morningWin = num(baseline.win?.[key] ?? baseline.win?.[laneNo], 0);
+    const morningSecond = num(baseline.second?.[key] ?? baseline.second?.[laneNo], 0);
+    const morningThird = num(baseline.third?.[key] ?? baseline.third?.[laneNo], 0);
+    return [key, {
+      morningWin,
+      morningSecond,
+      morningThird,
+      win: adjusted.win[key],
+      second: adjusted.second[key],
+      third: adjusted.third[key],
+      deltaWin: Math.round((adjusted.win[key] - morningWin) * 10) / 10,
+      deltaSecond: Math.round((adjusted.second[key] - morningSecond) * 10) / 10,
+      deltaThird: Math.round((adjusted.third[key] - morningThird) * 10) / 10,
+    }];
+  }));
+  prediction.probabilityReviewStatus = "reviewed";
+  prediction.probabilityFlow = {
+    required: true,
+    baseApplied: true,
+    baseLabel: "直前前エンジン予想",
+    realtimeApplied: true,
+    realtimeLabel: "展示・進入・直前情報反映",
+    reviewed: true,
+    reviewLabel: "再精査後の調整数字",
+    adjustedRequired: true,
+  };
+  prediction.predictionStage = {
+    label: "本予想",
+    statusText: "直前・展示を反映して再精査済み（オッズは表示確認のみ）",
+    badge: "本予想",
+    color: "green",
+  };
+  prediction.liveReviewMeta = {
+    method: "deterministic_live_review_v1",
+    directFetchedAt: documents.direct.fetched_at,
+    exhibitionFetchedAt: documents.exhibition.fetched_at,
+    originalExhibitionApplied: Boolean(originalRows && Object.keys(originalRanks).length === 6),
+    oddsFetchedAt: documents.odds.fetched_at,
+    oddsUsedForProbability: false,
+    exhibitionStartUsedAlone: false,
+  };
+  return true;
+}
+
 async function loadLiveRace() {
   if (!currentPayload || !currentVenueSlug) return;
   const date = currentPayload.date;
@@ -257,6 +397,7 @@ async function loadLiveRace() {
       fetchedAt: odds.fetched_at,
     };
   }
+  applyLivePredictionReview(prediction, { direct, exhibition, original_exhibition: original, odds });
   if (validLiveDocument(result, "result")) {
     prediction.result = {
       status: "ok",
