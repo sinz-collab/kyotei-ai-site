@@ -17,6 +17,7 @@ let currentPayload = null;
 let currentVenueSlug = "";
 let currentRaceNo = 1;
 let currentPane = "entry";
+let currentPredictionAvailable = true;
 let ticketMode = "ai";
 let liveRefreshTimer = null;
 let realtimeActionState = { cls: "idle", text: "ボタンを押すと取得・反映状況をここに表示します。" };
@@ -466,7 +467,13 @@ async function init() {
 function renderTop() {
   $("dateTitle").textContent = `${manifest.date || ""} のレース`;
   $("venueGrid").innerHTML = (manifest.venues || []).map((v) => {
-    const eventLabel = v.eventDayLabel ? `<b>${esc(v.eventDayLabel)}</b>` : "";
+    const eventLabel = `<b>${esc(v.eventDayLabel || "開催日目不明")}</b>`;
+    if (v.predictionStatus === "unavailable") return `<button class="venue" onclick="openVenue('${v.slug}')">
+      <div class="venue-status off">予想準備中</div>
+      <h2>${v.name}</h2>
+      <p>会場専用エンジン未登録<br>${v.entryCount || 0}R分 / 1R締切 ${v.firstDeadline || "-"}</p>
+      <strong>出走表を見る</strong>
+    </button>`;
     if (!v.open) return `<div class="venue off">
       <div class="venue-status off">非開催</div>
       <h2>${v.name}</h2>
@@ -501,6 +508,7 @@ async function openVenue(slug, route = {}) {
   }
   currentPayload = payload;
   currentVenueSlug = slug;
+  currentPredictionAvailable = v.predictionStatus !== "unavailable";
   currentPayload.venue = currentPayload.venue || v.name;
   currentPayload.date = currentPayload.date || v.date || manifest.date;
   currentPayload.eventDayLabel = currentPayload.eventDayLabel || v.eventDayLabel || "";
@@ -586,7 +594,7 @@ function pred() {
 
 function eventDayLabel() {
   const r = race();
-  return r.eventDayLabel || currentPayload?.eventDayLabel || currentPayload?.seriesDay || "";
+  return r.eventDayLabel || currentPayload?.eventDayLabel || currentPayload?.seriesDay || "開催日目不明";
 }
 
 function renderRace() {
@@ -674,7 +682,8 @@ function seasonDayLabel(group, index, groups) {
   if (group?.date) return `${base} ${group.date}`;
   const payloadDate = parsePayloadDate(currentPayload?.date || manifest?.date);
   if (!payloadDate) return base;
-  const currentDay = Number(race()?.eventDay || currentPayload?.eventDay || 0) || (groups?.length || 0) + 1;
+  const currentDay = Number(race()?.eventDay || currentPayload?.eventDay || 0);
+  if (!Number.isFinite(currentDay) || currentDay <= 0) return base;
   const dayNo = groupDayNumber(group, index);
   const date = addDays(payloadDate, dayNo - currentDay);
   return `${base} ${shortDateLabel(date)}`;
@@ -708,7 +717,10 @@ function seasonRunCard(run) {
 
 function seasonBoard(b) {
   const groups = normalizeSeasonGroups(b);
-  if (!groups.length) return `<div class="note">節間成績なし</div>`;
+  if (!groups.length) {
+    const currentDay = Number(race()?.eventDay || currentPayload?.eventDay || 0);
+    return `<div class="note">${currentDay === 1 ? "初日のため節間成績なし" : "節間成績未取得"}</div>`;
+  }
   return `<div class="season-board">${groups.map((g) => `<div class="season-day-row">
     <div class="season-day-head">${seasonDayLabel(g, groups.indexOf(g), groups)}</div>
     ${seasonRunCard((g.runs || [])[0])}
@@ -1047,6 +1059,9 @@ function renderTide() {
 }
 
 function renderPrediction() {
+  if (!currentPredictionAvailable) {
+    return `<div class="card"><h2>予想準備中</h2><div class="note">会場専用エンジン未登録<br>架空の確率、SAB、買い目は表示しません。</div></div>`;
+  }
   const p = pred(), r = p.readability || {}, s = p.predictionStage || {};
   const tickets = p[ticketMode] || [];
   const showDeltas = p.probabilityReviewStatus === "reviewed";
@@ -1107,6 +1122,9 @@ function renderPrediction() {
 }
 
 function renderLogs() {
+  if (!currentPredictionAvailable) {
+    return `<div class="card"><h2>予想準備中</h2><div class="note">会場専用エンジン未登録</div></div>`;
+  }
   const p = pred();
   const logs = p.logs || [];
   return `<div class="card"><h2>${currentRaceNo}R 補正ログ</h2>
