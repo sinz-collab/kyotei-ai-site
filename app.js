@@ -685,7 +685,9 @@ function eventDayLabel() {
 }
 
 function predictionEngineLabel() {
-  return currentPayload?.engine || (currentVenueSlug === "toda" ? "toda_prediction_engine_20260707" : "");
+  return currentPredictionAvailable
+    ? (currentPayload?.engine || "")
+    : "予想準備中";
 }
 
 function renderRace() {

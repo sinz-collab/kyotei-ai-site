@@ -45,5 +45,7 @@ assert(source.includes("const rt = race().live || p.realtime || {};"));
 assert(source.includes("const odds = race().odds || prediction.odds || {};"));
 assert(source.includes("const p = pred(), r = race().result || p.result || {};"));
 assert(source.includes("架空の確率、SAB、買い目は表示しません。"));
+assert(source.includes(': "予想準備中";'));
+assert.doesNotMatch(source, /currentVenueSlug === "toda"/);
 
 console.log("race data without prediction checks passed");
