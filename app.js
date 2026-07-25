@@ -413,7 +413,8 @@ async function loadLiveRace() {
     }
   }));
   const prediction = pred();
-  const realtime = { ...(prediction.realtime || {}) };
+  const currentRace = race();
+  const realtime = { ...(currentRace.live || prediction.realtime || {}) };
   const direct = documents.direct;
   const exhibition = documents.exhibition;
   const original = documents.original_exhibition;
@@ -465,16 +466,20 @@ async function loadLiveRace() {
       validLiveDocument(exhibition, "exhibition") ? exhibition.data.entries : [],
     );
   }
+  currentRace.live = realtime;
   prediction.realtime = realtime;
   if (validLiveDocument(odds, "odds")) {
     prediction.odds = { ...(prediction.odds || {}), ...(odds.data.odds || {}) };
+    currentRace.odds = { ...(currentRace.odds || {}), ...(odds.data.odds || {}) };
     prediction.oddsMeta = {
       count: Object.keys(odds.data.odds || {}).length,
       complete: odds.complete === true,
       fetchedAt: odds.fetched_at,
     };
   }
-  applyLivePredictionReview(prediction, { direct, exhibition, original_exhibition: original, odds });
+  if (currentPredictionAvailable) {
+    applyLivePredictionReview(prediction, { direct, exhibition, original_exhibition: original, odds });
+  }
   if (validLiveDocument(result, "result")) {
     prediction.result = {
       status: "ok",
@@ -485,6 +490,7 @@ async function loadLiveRace() {
       kimarite: result.data.kimarite,
       fetchedAt: result.fetched_at,
     };
+    currentRace.result = { ...prediction.result };
   }
 }
 
@@ -544,11 +550,11 @@ function renderTop() {
   $("dateTitle").textContent = `${manifest.date || ""} のレース`;
   $("venueGrid").innerHTML = (manifest.venues || []).map((v) => {
     const eventLabel = `<b>${esc(v.eventDayLabel || "開催日目不明")}</b>`;
-    if (v.predictionStatus === "unavailable") return `<button class="venue" onclick="openVenue('${v.slug}')">
+    if (v.open && (v.predictionStatus === "unavailable" || v.prediction_status === "unavailable")) return `<button class="venue" onclick="openVenue('${v.slug}')">
       <div class="venue-status off">予想準備中</div>
       <h2>${v.name}</h2>
-      <p>会場専用エンジン未登録<br>${v.entryCount || 0}R分 / 1R締切 ${v.firstDeadline || "-"}</p>
-      <strong>出走表を見る</strong>
+      <p>当日用予想データ未生成<br>${v.entryCount || 0}R分 / 1R締切 ${v.firstDeadline || "-"}</p>
+      <strong>レース情報を見る</strong>
     </button>`;
     if (!v.open) return `<div class="venue off">
       <div class="venue-status off">非開催</div>
@@ -584,7 +590,12 @@ async function openVenue(slug, route = {}) {
   }
   currentPayload = payload;
   currentVenueSlug = slug;
-  currentPredictionAvailable = v.predictionStatus !== "unavailable";
+  currentPredictionAvailable = (
+    v.predictionAvailable === true
+    || v.prediction_available === true
+    || v.predictionStatus === "ready"
+    || v.prediction_status === "ready"
+  );
   currentPayload.venue = currentPayload.venue || v.name;
   currentPayload.date = currentPayload.date || v.date || manifest.date;
   currentPayload.eventDayLabel = currentPayload.eventDayLabel || v.eventDayLabel || "";
@@ -1080,7 +1091,7 @@ function renderSlit(realtime) {
 
 function renderRealtime() {
   const p = pred();
-  const rt = p.realtime || {};
+  const rt = race().live || p.realtime || {};
   const last = rowMap(rt.last || rt.lastMinute || rt.before || rt.direct);
   const original = rowMap(rt.original || rt.originalExhibition || rt.sum || rt.display);
   const weather = rt.weather || {};
@@ -1148,7 +1159,7 @@ function renderTide() {
 
 function renderPrediction() {
   if (!currentPredictionAvailable) {
-    return `<div class="card"><h2>予想準備中</h2><div class="note">会場専用エンジン未登録<br>架空の確率、SAB、買い目は表示しません。</div></div>`;
+    return `<div class="card"><h2>予想準備中</h2><div class="note">当日用予想データ未生成<br>架空の確率、SAB、買い目は表示しません。</div></div>`;
   }
   const p = pred(), r = p.readability || {}, s = p.predictionStage || {};
   const tickets = p[ticketMode] || [];
@@ -1211,7 +1222,7 @@ function renderPrediction() {
 
 function renderLogs() {
   if (!currentPredictionAvailable) {
-    return `<div class="card"><h2>予想準備中</h2><div class="note">会場専用エンジン未登録</div></div>`;
+    return `<div class="card"><h2>予想準備中</h2><div class="note">当日用予想データ未生成</div></div>`;
   }
   const p = pred();
   const logs = p.logs || [];
@@ -1221,7 +1232,7 @@ function renderLogs() {
 }
 
 function renderResult() {
-  const p = pred(), r = p.result || {};
+  const p = pred(), r = race().result || p.result || {};
   const hitAi = (r.hitAi || []).length, hitUpset = (r.hitUpset || []).length;
   const order = String(r.order || "").split("-").filter(Boolean);
   const kimariteNote = r.kimariteSource === "inferred" ? `<small>推定</small>` : "";
@@ -1250,7 +1261,7 @@ function oddsClass(value) {
 
 function renderOdds() {
   const prediction = pred();
-  const odds = prediction.odds || {};
+  const odds = race().odds || prediction.odds || {};
   const meta = prediction.oddsMeta || {};
   const entries = Object.entries(odds)
     .map(([key, value]) => ({ key, value, parts: String(key).split("-").map(Number) }))
