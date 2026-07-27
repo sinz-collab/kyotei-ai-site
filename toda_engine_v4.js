@@ -158,7 +158,26 @@
     }));
   }
 
-  function buildTickets(win, second, third, scenarios, sab) {
+  function comboProbability(combo, win, second, third) {
+    const [a, b, c] = String(combo).split("-").map(Number);
+    if (!a || !b || !c) return 0;
+    return Math.round((
+      n(win[String(a)], 0) *
+      n(second[String(b)], 0) *
+      n(third[String(c)], 0) / 10000
+    ) * 10) / 10;
+  }
+
+  function ticketObjects(combos, win, second, third, role) {
+    return combos.map((combo, index) => ({
+      combo,
+      role: index < 3 ? role : `${role}・展開保険`,
+      prob: comboProbability(combo, win, second, third),
+      odds: "-",
+    }));
+  }
+
+  function buildTicketCombos(win, second, third, scenarios, sab) {
     const heads = LANES.slice().sort((a, b) => win[String(b)] - win[String(a)]);
     const headLimit = sab === "S" ? 1 : (sab === "A" ? 2 : 3);
     const tickets = [];
@@ -175,6 +194,24 @@
     return [...new Set(tickets)].slice(0, sab === "S" ? 6 : sab === "A" ? 9 : 10);
   }
 
+  function buildUpsetCombos(win, second, third, scenarios) {
+    const nonOneHeads = LANES.filter((lane) => lane !== 1)
+      .sort((a, b) => win[String(b)] - win[String(a)])
+      .slice(0, 2);
+    const tickets = [];
+    for (const head of nonOneHeads) {
+      const links = scenarios.find((s) => s.head === head)?.links || LANES.filter((lane) => lane !== head);
+      const seconds = links.filter((lane) => lane !== head)
+        .sort((a, b) => second[String(b)] - second[String(a)]).slice(0, 2);
+      for (const secondLane of seconds) {
+        const thirds = LANES.filter((lane) => lane !== head && lane !== secondLane)
+          .sort((a, b) => third[String(b)] - third[String(a)]).slice(0, 2);
+        for (const thirdLane of thirds) tickets.push(`${head}-${secondLane}-${thirdLane}`);
+      }
+    }
+    return [...new Set(tickets)].slice(0, 8);
+  }
+
   function buildMorningPrediction(race, context = {}) {
     const racers = Array.isArray(race?.racers) ? race.racers : [];
     if (racers.length !== 6) return null;
@@ -189,7 +226,15 @@
     const gap = win[String(axis)] - win[String(heads[1])];
     const scenarioAligned = scenarios.some((s) => s.head === axis && s.weight >= 0.75);
     const sab = gap >= 9 && scenarioAligned ? "S" : (gap >= 4.2 ? "A" : "B");
-    const tickets = buildTickets(win, second, third, scenarios, sab);
+    const ticketCombos = buildTicketCombos(win, second, third, scenarios, sab);
+    const upsetCombos = buildUpsetCombos(win, second, third, scenarios);
+    const ai = ticketObjects(ticketCombos, win, second, third, "本線");
+    const aiUpset = ticketObjects(upsetCombos, win, second, third, "荒れ対応");
+    const attackScenario = scenarios.find((s) => [2, 3, 4, 5].includes(s.head)) || scenarios[0];
+    const upsetIndex = Math.round(clamp(
+      100 - win["1"] + (oneWeak ? 12 : 0) + Math.max(0, win[String(heads[1])] - 12),
+      5, 95
+    ) * 10) / 10;
     return {
       engine: ENGINE_ID,
       master: MASTER_ID,
@@ -200,7 +245,23 @@
       oneWeak,
       sab,
       confidence: Math.round(clamp(47 + gap * 2.0 + (sab === "S" ? 8 : sab === "A" ? 3 : 0), 40, 88)),
-      tickets,
+      upsetIndex,
+      attack: {
+        attackLane: attackScenario?.head || axis,
+        label: attackScenario?.label || `${axis}号艇中心`,
+      },
+      readability: {
+        axisLane: axis,
+        comment: `主軸${axis}号艇／${scenarios.find((s) => s.head === axis)?.label || "基礎能力上位"}`,
+      },
+      tideZone: {
+        nearest: first(context.tide_phase, context.tidePhase, "-"),
+        phase: first(context.tide_phase, context.tidePhase, "-"),
+        bucket: first(context.tide_level, context.tideLevel, "-"),
+      },
+      tickets: ticketCombos,
+      ai,
+      aiUpset,
       probabilityFlow: {
         required: true, baseApplied: true, baseLabel: "戸田v4事前基礎予想",
         realtimeApplied: false, realtimeLabel: "直前情報未反映", reviewed: false,
@@ -267,6 +328,23 @@
         deltaThird: Math.round((reviewed.third[key] - n(baseline.third[key], 0)) * 10) / 10,
       }];
     }));
+    const liveScenarios = Array.isArray(prediction.scenarios) ? prediction.scenarios : [];
+    const liveSab = prediction.sab || "B";
+    const liveCombos = buildTicketCombos(reviewed.win, reviewed.second, reviewed.third, liveScenarios, liveSab);
+    const liveUpsetCombos = buildUpsetCombos(reviewed.win, reviewed.second, reviewed.third, liveScenarios);
+    prediction.tickets = liveCombos;
+    prediction.ai = ticketObjects(liveCombos, reviewed.win, reviewed.second, reviewed.third, "本線");
+    prediction.aiUpset = ticketObjects(liveUpsetCombos, reviewed.win, reviewed.second, reviewed.third, "荒れ対応");
+    const liveHeads = LANES.slice().sort((a, b) => reviewed.win[String(b)] - reviewed.win[String(a)]);
+    prediction.readability = {
+      ...(prediction.readability || {}),
+      axisLane: liveHeads[0],
+      comment: `直前補正後の主軸${liveHeads[0]}号艇`,
+    };
+    prediction.upsetIndex = Math.round(clamp(
+      100 - reviewed.win["1"] + (prediction.oneWeak ? 12 : 0),
+      5, 95
+    ) * 10) / 10;
     prediction.engine = ENGINE_ID;
     prediction.master = MASTER_ID;
     prediction.probabilityReviewStatus = "reviewed";
@@ -289,7 +367,7 @@
     return true;
   }
 
-  const api = { LANES, ENGINE_ID, MASTER_ID, normalize, detectScenarios, buildMorningPrediction, applyLiveReview };
+  const api = { LANES, ENGINE_ID, MASTER_ID, normalize, detectScenarios, buildMorningPrediction, applyLiveReview, buildTicketCombos, buildUpsetCombos };
   root.TodaEngineV4 = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);
