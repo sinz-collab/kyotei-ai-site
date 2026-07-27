@@ -1,41 +1,19 @@
-# 競艇AI予想サイト 公開用フォルダ
+# Toda Engine v4 COMPLETE UPLOAD
 
-このフォルダは、GitHub + Netlify で公開するための最小構成です。
+戸田AIマスター `Toda_AI_MASTER_v3_1_COMPLETE_ONE_FILE` の運用方針を、SINZ EDGEのサイト表示と朝予想生成へ接続する完成パッケージです。
 
-## 中身
+## 構成
+- `toda_engine_v4.js`: 事前確率、展開シナリオ、SAB、直前補正
+- `toda_engine_adapter_v4.js`: 現行戸田JSONからv4予想を生成
+- `toda_site_integration_v4.js`: 現行app.jsを変更せず戸田だけv4へ切替
+- `index.html`: 上記3スクリプトを読み込む完成版
+- `tools/generate_toda_predictions_v4.py`: 朝の公開JSONへ予想を書き込むPython版
+- `tests/`: Node/Pythonテスト
+- `UPLOAD_GUIDE.md`: スマホGitHubからのアップロード手順
 
-```text
-netlify_site
-├─ index.html
-├─ netlify.toml
-├─ README.md
-└─ toda_20260709_demo
-   └─ index.html
-```
-
-## 公開の考え方
-
-- `index.html` がトップページ
-- `toda_20260709_demo/index.html` が戸田の予想ページ
-- Netlifyでは、この `netlify_site` フォルダを公開対象にする
-
-## Netlify設定
-
-Netlifyで設定する場合:
-
-- Build command: 空欄でOK
-- Publish directory: `.`  
-
-GitHubリポジトリのルートにこのフォルダの中身を置く場合は、Publish directory は `.` でOKです。
-
-もしリポジトリ直下に `netlify_site` フォルダごと置く場合は、Publish directory を `netlify_site` にしてください。
-
-## 注意
-
-この公開用フォルダには、Python取得スクリプト、マスターデータ、ログ、ローカルパスを含めない方針です。
-
-自動取得・予想生成は今後、別途以下のどちらかで動かす想定です。
-
-1. 自宅PCで実行してJSON/HTMLを更新
-2. VPSで実行してNetlify側へ反映
-
+## 固定原則
+- オッズは確率に使わない
+- 展示ST単独補正は禁止
+- 基礎能力、当地、平均ST、コース適性、モーター、節間、潮風波、展示、オリ展示、実進入、展開連動を段階統合
+- 補正後は1着・2着・3着率を各100%へ再正規化
+- 戸田以外の会場ロジックは変更しない
