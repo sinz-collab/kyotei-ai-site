@@ -1,4 +1,4 @@
-﻿const DEFAULT_DATA_BASES = [
+const DEFAULT_DATA_BASES = [
   "../../kyotei-ai-data/data",
   "https://raw.githubusercontent.com/sinz-collab/kyotei-ai-data/main/data",
 ];
@@ -888,51 +888,68 @@ function courseScore(b) {
 }
 
 function kimariteInfo(b) {
-  const typeMap = {
-    escape_type: "逃げ型",
-    sashi_type: "差し型",
-    makuri_type: "まくり型",
-    makuri_zashi_type: "まくり差し型",
-    center_attack_type: "センター攻め型",
-    mixed_type: "万能型",
-    no_win_sample: "勝ちサンプル少",
+  const actualCourse = Number(
+    b.actual_course ||
+    b.entry_course ||
+    b.course ||
+    b.lane
+  );
+
+  const startsRaw = firstValue(
+    b.boaters_kimarite_starts,
+    b.kimarite_starts
+  );
+  const starts = num(startsRaw, NaN);
+  const hasBoatersData = Number.isFinite(starts) && starts >= 1;
+
+  const formatRate = (value) => {
+    if (value === undefined || value === null || value === "" || value === "-") {
+      return "-";
+    }
+    const parsed = num(value, NaN);
+    return Number.isFinite(parsed) ? `${parsed.toFixed(1)}%` : "-";
   };
-  const bkStarts = num(b.boaters_kimarite_starts, 0);
-  if (bkStarts >= 1) {
-    if (Number(b.lane) === 1) {
+
+  if (hasBoatersData) {
+    if (actualCourse === 1) {
       const escape = num(b.boaters_escape_rate, NaN);
       const sashare = num(b.boaters_sashare_rate, NaN);
       const makurare = num(b.boaters_makurare_rate, NaN);
       const makurareZashi = num(b.boaters_makurare_zashi_rate, NaN);
+
       const attacked = Math.max(
         Number.isFinite(sashare) ? sashare : 0,
         Number.isFinite(makurare) ? makurare : 0,
         Number.isFinite(makurareZashi) ? makurareZashi : 0
       );
-      const score = (Number.isFinite(escape) ? escape : 0) - attacked * 0.25;
+
       return {
-        score,
-        main: `逃げ ${Number.isFinite(escape) ? escape.toFixed(1) : "-"}%`,
-        sub: `差され ${Number.isFinite(sashare) ? sashare.toFixed(1) : "-"}% / まくられ差 ${Number.isFinite(makurareZashi) ? makurareZashi.toFixed(1) : "-"}% / ${bkStarts}走`,
+        score: (Number.isFinite(escape) ? escape : 0) - attacked * 0.25,
+        main: `逃げ ${formatRate(b.boaters_escape_rate)} / 差され ${formatRate(b.boaters_sashare_rate)}`,
+        sub: `まくられ ${formatRate(b.boaters_makurare_rate)} / まくられ差 ${formatRate(b.boaters_makurare_zashi_rate)} / ${starts}走`,
       };
     }
-    const s = num(b.boaters_sashi_rate, NaN), m = num(b.boaters_makuri_rate, NaN), ms = num(b.boaters_makuri_sashi_rate, NaN);
-    const score = Math.max(Number.isFinite(s) ? s : 0, Number.isFinite(m) ? m : 0, Number.isFinite(ms) ? ms : 0);
+
+    const sashi = num(b.boaters_sashi_rate, NaN);
+    const makuri = num(b.boaters_makuri_rate, NaN);
+    const makuriZashi = num(b.boaters_makuri_sashi_rate, NaN);
+
     return {
-      score,
-      main: `差 ${Number.isFinite(s) ? s.toFixed(1) : "-"}% / ま ${Number.isFinite(m) ? m.toFixed(1) : "-"}%`,
-      sub: `ま差 ${Number.isFinite(ms) ? ms.toFixed(1) : "-"}% / 逃し ${safe(b.boaters_nigashi_rate)}% / ${bkStarts}走`,
+      score: Math.max(
+        Number.isFinite(sashi) ? sashi : 0,
+        Number.isFinite(makuri) ? makuri : 0,
+        Number.isFinite(makuriZashi) ? makuriZashi : 0
+      ),
+      main: `逃し ${formatRate(b.boaters_nigashi_rate)} / 差し ${formatRate(b.boaters_sashi_rate)}`,
+      sub: `まくり ${formatRate(b.boaters_makuri_rate)} / まくり差し ${formatRate(b.boaters_makuri_sashi_rate)} / ${starts}走`,
     };
   }
-  const kimType = typeMap[b.kimarite_main] || typeMap[b.kimarite_attack_type] || safe(b.kimarite_main || b.kimarite_attack_type, "");
-  const sample = `${safe(b.kimarite_starts)}走 / 勝 ${safe(b.kimarite_wins)}`;
-  if (Number(b.lane) === 1) {
-    const v = num(b.escape_rate, NaN);
-    return { score: Number.isFinite(v) ? v : 0, main: `逃げ ${Number.isFinite(v) ? v.toFixed(1) : "-"}%`, sub: kimType ? `${kimType} / ${sample}` : sample };
-  }
-  const s = num(b.sashi_rate, NaN), m = num(b.makuri_rate, NaN), ms = num(b.makuri_sashi_rate, NaN);
-  const score = Math.max(Number.isFinite(s) ? s : 0, Number.isFinite(m) ? m : 0, Number.isFinite(ms) ? ms : 0);
-  return { score, main: `${kimType ? kimType + " " : ""}差 ${Number.isFinite(s) ? s.toFixed(1) : "-"}% / ま ${Number.isFinite(m) ? m.toFixed(1) : "-"}%`, sub: `ま差 ${Number.isFinite(ms) ? ms.toFixed(1) : "-"}% / ${sample}` };
+
+  return {
+    score: 0,
+    main: "未取得",
+    sub: "決まり手データなし",
+  };
 }
 
 function seasonScore(b) {
@@ -1313,4 +1330,3 @@ document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => {
 $("backTop").onclick = () => showView("top");
 
 init();
-
