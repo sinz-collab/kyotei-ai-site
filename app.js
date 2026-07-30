@@ -1250,10 +1250,55 @@ function renderLogs() {
   </div>`;
 }
 
+function normalizeResultOrder(value) {
+  if (Array.isArray(value)) {
+    return value.map((n) => String(n).trim()).filter(Boolean).slice(0, 3);
+  }
+  return String(value || "")
+    .replace(/[＞>→]/g, "-")
+    .split(/[-,\s]+/)
+    .map((n) => n.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function validResultOrder(order) {
+  return order.length === 3
+    && new Set(order).size === 3
+    && order.every((n) => /^[1-6]$/.test(n));
+}
+
+function ticketCombo(ticket) {
+  if (typeof ticket === "string") return ticket;
+  return firstValue(ticket?.combo, ticket?.combination, ticket?.ticket, ticket?.bet, "");
+}
+
+function normalizeCombo(value) {
+  const order = normalizeResultOrder(value);
+  return validResultOrder(order) ? order.join("-") : "";
+}
+
+function storedHit(value) {
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value > 0;
+  const text = String(value ?? "").trim().toLowerCase();
+  if (["true", "1", "hit", "的中"].includes(text)) return true;
+  if (["", "false", "0", "-", "なし", "不的中"].includes(text)) return false;
+  return false;
+}
+
+function ticketListHit(tickets, resultCombo) {
+  if (!resultCombo || !Array.isArray(tickets)) return false;
+  return tickets.some((ticket) => normalizeCombo(ticketCombo(ticket)) === resultCombo);
+}
+
 function renderResult() {
   const p = pred(), r = race().result || p.result || {};
-  const hitAi = (r.hitAi || []).length, hitUpset = (r.hitUpset || []).length;
-  const order = String(r.order || "").split("-").filter(Boolean);
+  const order = normalizeResultOrder(r.order);
+  const resultCombo = validResultOrder(order) ? order.join("-") : "";
+  const hitAi = storedHit(r.hitAi) || ticketListHit(p.ai, resultCombo);
+  const hitUpset = storedHit(r.hitUpset) || ticketListHit(p.aiUpset, resultCombo);
   const kimariteNote = r.kimariteSource === "inferred" ? `<small>推定</small>` : "";
   return `<div class="card result-main"><h2>レース結果</h2>
     <div class="stage ${r.status === "ok" ? "green" : "yellow"}"><div><b>${r.status === "ok" ? "結果取得済み" : "結果待ち"}</b><br>${r.message || ""}</div><span>${r.status === "ok" ? "確定" : "待機"}</span></div>
