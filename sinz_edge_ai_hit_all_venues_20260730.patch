@@ -1,0 +1,45 @@
+--- a/app.js
++++ b/app.js
+@@ -1250,10 +1250,40 @@
+   </div>`;
+ }
+ 
++function normalizeResultOrder(value) {
++  if (Array.isArray(value)) {
++    return value.map((n) => String(n).trim()).filter(Boolean).slice(0, 3);
++  }
++  return String(value || "")
++    .replace(/[＞>→]/g, "-")
++    .split(/[-,\s]+/)
++    .map((n) => n.trim())
++    .filter(Boolean)
++    .slice(0, 3);
++}
++
++function ticketCombo(ticket) {
++  if (typeof ticket === "string") return ticket;
++  return firstValue(ticket?.combo, ticket?.combination, ticket?.ticket, ticket?.bet, "");
++}
++
++function normalizeCombo(value) {
++  return normalizeResultOrder(value).join("-");
++}
++
++function ticketListHit(tickets, resultCombo) {
++  if (!resultCombo || !Array.isArray(tickets)) return false;
++  return tickets.some((ticket) => normalizeCombo(ticketCombo(ticket)) === resultCombo);
++}
++
+ function renderResult() {
+   const p = pred(), r = race().result || p.result || {};
+-  const hitAi = (r.hitAi || []).length, hitUpset = (r.hitUpset || []).length;
+-  const order = String(r.order || "").split("-").filter(Boolean);
++  const order = normalizeResultOrder(r.order);
++  const resultCombo = order.join("-");
++  const storedHitAi = Array.isArray(r.hitAi) ? r.hitAi.length > 0 : Boolean(r.hitAi);
++  const storedHitUpset = Array.isArray(r.hitUpset) ? r.hitUpset.length > 0 : Boolean(r.hitUpset);
++  const hitAi = storedHitAi || ticketListHit(p.ai, resultCombo);
++  const hitUpset = storedHitUpset || ticketListHit(p.aiUpset, resultCombo);
+   const kimariteNote = r.kimariteSource === "inferred" ? `<small>推定</small>` : "";
+   return `<div class="card result-main"><h2>レース結果</h2>
+     <div class="stage ${r.status === "ok" ? "green" : "yellow"}"><div><b>${r.status === "ok" ? "結果取得済み" : "結果待ち"}</b><br>${r.message || ""}</div><span>${r.status === "ok" ? "確定" : "待機"}</span></div>
