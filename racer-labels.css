@@ -1,0 +1,11 @@
+.racer-lane-cell{min-width:92px;padding-left:4px;padding-right:4px;vertical-align:middle}
+.racer-lane-cell .lane{display:flex;margin:0 auto}
+.racer-lane-meta{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:5px;white-space:nowrap;line-height:1.15}
+.racer-lane-name{display:inline-block;max-width:66px;overflow:hidden;text-overflow:ellipsis;color:#17202a;font-size:10px;font-weight:900;vertical-align:middle}
+.racer-lane-grade{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:17px;padding:0 3px;border-radius:3px;background:#8a8f98;color:#fff;font-size:9px;font-weight:950;line-height:1;flex:0 0 auto}
+.racer-lane-grade.a{background:#dc2626}
+@media (max-width:420px){
+  .racer-lane-cell{min-width:86px}
+  .racer-lane-name{max-width:59px;font-size:9px}
+  .racer-lane-grade{min-width:21px;height:16px;font-size:8px}
+}
