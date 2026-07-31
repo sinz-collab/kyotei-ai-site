@@ -676,7 +676,49 @@ function race() {
 }
 
 function pred() {
-  return currentPayload?.preds?.[String(currentRaceNo)] || {};
+  const legacy = currentPayload?.preds?.[String(currentRaceNo)];
+  if (legacy) return legacy;
+
+  const raceData = race();
+  const source = raceData?.prediction;
+  if (!source) return {};
+
+  const ticketRows = (rows, role) =>
+    (Array.isArray(rows) ? rows : []).map((item) => ({
+      combo: item.combination || item.combo || "",
+      role: item.category || role,
+      prob: item.score_pct ?? item.prob ?? 0,
+      odds: item.odds ?? "-"
+    }));
+
+  return {
+    ...source,
+    win: source.probabilities?.win || source.win || {},
+    second: source.probabilities?.second || source.second || {},
+    third: source.probabilities?.third || source.third || {},
+    sab: source.sab?.grade || source.sab || "-",
+    ai: [
+      ...ticketRows(source.tickets?.main, "本線"),
+      ...ticketRows(source.tickets?.deviation, "ずらし")
+    ],
+    aiUpset: ticketRows(
+      source.tickets?.upset || source.tickets?.insurance,
+      "荒れ"
+    ),
+    upsetIndex: source.upsetIndex ?? 0,
+    readability: source.readability || {},
+    attack: source.attack || {},
+    logs: source.logs || [],
+    predictionStage: source.predictionStage || {
+      label: source.status === "ready" ? "本予想" : "仮予想",
+      statusText:
+        source.status === "ready"
+          ? "常滑AI v1.6予想"
+          : "予想準備中",
+      badge: source.status === "ready" ? "本予想" : "仮予想",
+      color: source.status === "ready" ? "green" : "gray"
+    }
+  };
 }
 
 function eventDayLabel() {
