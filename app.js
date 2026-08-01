@@ -683,13 +683,24 @@ function pred() {
   const source = raceData?.prediction;
   if (!source) return {};
 
+  const oddsMap = raceData?.odds || source.odds || {};
+
   const ticketRows = (rows, role) =>
-    (Array.isArray(rows) ? rows : []).map((item) => ({
-      combo: item.combination || item.combo || "",
-      role: item.category || role,
-      prob: item.score_pct ?? item.prob ?? 0,
-      odds: item.odds ?? "-"
-    }));
+    (Array.isArray(rows) ? rows : []).map((item) => {
+      const combo = item.combination || item.combo || "";
+      const compactCombo = combo.replace(/-/g, "");
+
+      return {
+        combo,
+        role: item.category || role,
+        prob: item.score_pct ?? item.prob ?? 0,
+        odds:
+          item.odds ??
+          oddsMap[combo] ??
+          oddsMap[compactCombo] ??
+          "-"
+      };
+    });
 
   return {
     ...source,
