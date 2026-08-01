@@ -1261,11 +1261,18 @@ function renderPrediction() {
   const tickets = p[ticketMode] || [];
   const showDeltas = p.probabilityReviewStatus === "reviewed";
   const flow = p.probabilityFlow || {};
-  const stageLabel = (flow.reviewed || showDeltas) ? "本予想" : "仮予想";
-  const stageStatus = (flow.reviewed || showDeltas)
-    ? "展示・スリット・直前情報を反映して再精査済み"
-    : "前データでのエンジン予想。直前・展示取得後に本予想へ更新";
-  const stageColor = (flow.reviewed || showDeltas) ? "green" : "yellow";
+  const isFinalStage =
+    p.status === "ready" ||
+    s.label === "本予想" ||
+    s.badge === "本予想" ||
+    flow.reviewed ||
+    showDeltas;
+
+  const stageLabel = isFinalStage ? "本予想" : "仮予想";
+  const stageStatus = isFinalStage
+    ? (s.statusText || "展示・スリット・直前情報を反映して再精査済み")
+    : (s.statusText || "前データでのエンジン予想。直前・展示取得後に本予想へ更新");
+  const stageColor = isFinalStage ? "green" : "yellow";
   const delta = (review, key) => {
     if (!showDeltas) return "";
     const v = num(review?.[key], NaN);
