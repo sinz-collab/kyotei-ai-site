@@ -705,6 +705,10 @@ function pred() {
   const source = raceData?.prediction;
   if (!source) return {};
 
+  if (raceData._uiPrediction) {
+    return raceData._uiPrediction;
+  }
+
   const oddsMap = raceData?.odds || source.odds || {};
 
   const ticketRows = (rows, role) =>
@@ -723,8 +727,7 @@ function pred() {
           "-"
       };
     });
-
-  return {
+  const normalizedPrediction = {
     ...source,
     win: source.probabilities?.win || source.win || {},
     second: source.probabilities?.second || source.second || {},
@@ -749,6 +752,15 @@ function pred() {
       color: "gray"
     }
   };
+
+  Object.defineProperty(raceData, "_uiPrediction", {
+    value: normalizedPrediction,
+    writable: true,
+    configurable: true,
+    enumerable: false
+  });
+
+  return normalizedPrediction;
 }
 
 function eventDayLabel() {
