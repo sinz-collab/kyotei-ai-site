@@ -1262,7 +1262,7 @@ function renderPrediction() {
   const showDeltas = p.probabilityReviewStatus === "reviewed";
   const flow = p.probabilityFlow || {};
   const isFinalStage =
-    p.status === "ready" ||
+    (p.status === "ready" || p.status === "complete") ||
     s.label === "本予想" ||
     s.badge === "本予想" ||
     flow.reviewed ||
