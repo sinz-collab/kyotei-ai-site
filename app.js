@@ -690,10 +690,11 @@ function pred() {
         return {
           ...item,
           odds:
-            item.odds ??
-            oddsMap[combo] ??
-            oddsMap[compactCombo] ??
-            "-"
+            item.odds && item.odds !== "-"
+              ? item.odds
+              : oddsMap[combo] ??
+                oddsMap[compactCombo] ??
+                "-"
         };
       });
 
