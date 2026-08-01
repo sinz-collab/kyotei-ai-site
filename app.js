@@ -743,13 +743,10 @@ function pred() {
     attack: source.attack || {},
     logs: source.logs || [],
     predictionStage: source.predictionStage || {
-      label: source.status === "ready" ? "本予想" : "仮予想",
-      statusText:
-        source.status === "ready"
-          ? "常滑AI v1.6予想"
-          : "予想準備中",
-      badge: source.status === "ready" ? "本予想" : "仮予想",
-      color: source.status === "ready" ? "green" : "gray"
+      label: "仮予想",
+      statusText: "前データでのエンジン予想。直前・展示取得後に本予想へ更新",
+      badge: "仮予想",
+      color: "gray"
     }
   };
 }
