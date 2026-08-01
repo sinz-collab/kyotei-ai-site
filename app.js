@@ -606,6 +606,12 @@ async function openVenue(slug, route = {}) {
   showView("race");
   renderRace();
   await loadLiveRace();
+
+  if (pred().probabilityReviewStatus !== "reviewed") {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await loadLiveRace();
+  }
+
   renderPane();
   startLiveRefresh();
 }
