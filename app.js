@@ -676,10 +676,33 @@ function race() {
 }
 
 function pred() {
-  const legacy = currentPayload?.preds?.[String(currentRaceNo)];
-  if (legacy) return legacy;
-
   const raceData = race();
+  const legacy = currentPayload?.preds?.[String(currentRaceNo)];
+
+  if (legacy) {
+    const oddsMap = raceData?.odds || legacy.odds || {};
+
+    const attachOdds = (rows) =>
+      (Array.isArray(rows) ? rows : []).map((item) => {
+        const combo = item.combo || item.combination || "";
+        const compactCombo = combo.replace(/-/g, "");
+
+        return {
+          ...item,
+          odds:
+            item.odds ??
+            oddsMap[combo] ??
+            oddsMap[compactCombo] ??
+            "-"
+        };
+      });
+
+    return {
+      ...legacy,
+      ai: attachOdds(legacy.ai),
+      aiUpset: attachOdds(legacy.aiUpset)
+    };
+  }
   const source = raceData?.prediction;
   if (!source) return {};
 
