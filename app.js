@@ -1174,28 +1174,204 @@ function exhibitionCell(row, status, cls = "") {
   return timeBadge("-");
 }
 
+function slitBoatSvg(n) {
+  const fill = boatColor(n);
+  const textColor = n === 1 || n === 5 ? "#111827" : "#ffffff";
+
+  return `
+    <svg
+      class="slit-boat-svg"
+      viewBox="0 0 82 32"
+      role="img"
+      aria-label="${n}号艇"
+    >
+      <g class="slit-boat-wake">
+        <path d="M1 9 C8 7 13 7 21 9" />
+        <path d="M0 16 C9 14 14 14 22 16" />
+        <path d="M1 23 C8 25 13 25 21 23" />
+      </g>
+
+      <g class="slit-boat-engine">
+        <rect x="17" y="8" width="10" height="16" rx="2" />
+        <rect x="14" y="11" width="5" height="10" rx="1.5" />
+        <line x1="20" y1="11" x2="24" y2="11" />
+        <line x1="20" y1="21" x2="24" y2="21" />
+      </g>
+
+      <path
+        class="slit-boat-hull"
+        d="M25 4 L58 4 Q70 5 80 16 Q70 27 58 28 L25 28 Q20 24 20 16 Q20 8 25 4 Z"
+        fill="${fill}"
+      />
+
+      <path
+        class="slit-boat-deck"
+        d="M32 8 L55 8 Q64 9 71 16 Q64 23 55 24 L32 24 Q28 21 28 16 Q28 11 32 8 Z"
+      />
+
+      <path
+        class="slit-boat-bow"
+        d="M60 8 L77 16 L60 24 Z"
+      />
+
+      <path
+        class="slit-boat-highlight"
+        d="M28 7 C42 5 56 6 65 10"
+      />
+
+      <text
+        x="46"
+        y="16"
+        text-anchor="middle"
+        fill="${textColor}"
+      >${n}</text>
+    </svg>
+  `;
+}
 function renderSlit(realtime) {
-  const last = rowMap(realtime.last || realtime.lastMinute || realtime.before || realtime.direct || realtime.slit || realtime.start || realtime.st || []);
-  const rows = Object.keys(last).length ? [1,2,3,4,5,6].filter((n) => last[n]) : [];
-  if (!rows.length) return `<h3>スリット隊形</h3><div class="note">スリット情報はまだ未取得です。</div>`;
-  const line = 66;
-  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
-  const slitSt = (n) => firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST);
-  const pos = (n) => {
-    const raw = String(firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST, "")).trim();
-    const v = num(raw, NaN);
-    if (!Number.isFinite(v)) return 45;
-    if (raw.startsWith("F")) return clamp(line + Math.abs(v) * 70, line + 3, 82);
-    return clamp(line - v * 185, 28, line - 2);
+  const last = rowMap(
+    realtime.last ||
+    realtime.lastMinute ||
+    realtime.before ||
+    realtime.direct ||
+    realtime.slit ||
+    realtime.start ||
+    realtime.st ||
+    []
+  );
+
+  const rows = Object.keys(last).length
+    ? [1, 2, 3, 4, 5, 6].filter((n) => last[n])
+    : [];
+
+  if (!rows.length) {
+    return `<h3>スリット隊形</h3><div class="note">スリット情報はまだ未取得です。</div>`;
+  }
+
+  const SCALE_MAX = 1.00;
+  const SCALE_MIN = -0.10;
+
+  const clamp = (value, min, max) =>
+    Math.max(min, Math.min(max, value));
+
+  const slitRaw = (n) =>
+    String(
+      firstValue(
+        last[n]?.st_raw,
+        last[n]?.st,
+        last[n]?.ST,
+        ""
+      )
+    ).trim();
+
+  const parseSlitSt = (rawValue) => {
+    const raw = String(rawValue || "").trim().toUpperCase();
+
+    if (!raw) return NaN;
+
+    const isFlying = raw.startsWith("F");
+    const numericValue = Number.parseFloat(
+      raw.replace(/^F[\.\s]?/, "")
+    );
+
+    if (!Number.isFinite(numericValue)) return NaN;
+
+    return isFlying
+      ? -Math.abs(numericValue)
+      : numericValue;
   };
-  const order = rows.sort((a, b) => realtimeCourse(last[a], a) - realtimeCourse(last[b], b));
+
+  const boatPosition = (n) => {
+    const value = parseSlitSt(slitRaw(n));
+
+    if (!Number.isFinite(value)) return 50;
+
+    const limited = clamp(value, SCALE_MIN, SCALE_MAX);
+
+    return (
+      ((SCALE_MAX - limited) /
+        (SCALE_MAX - SCALE_MIN)) *
+      100
+    );
+  };
+
+  const axisValues = [
+    { value: 1.00, label: "1.00" },
+    { value: 0.80, label: "0.80" },
+    { value: 0.60, label: "0.60" },
+    { value: 0.40, label: "0.40" },
+    { value: 0.20, label: "0.20" },
+    { value: 0.00, label: "0.00", start: true },
+    { value: -0.10, label: "-0.10" }
+  ];
+
+  const axisPosition = (value) =>
+    ((SCALE_MAX - value) /
+      (SCALE_MAX - SCALE_MIN)) *
+    100;
+
+  const order = rows.sort(
+    (a, b) =>
+      realtimeCourse(last[a], a) -
+      realtimeCourse(last[b], b)
+  );
+
   const changed = order.some((n, i) => n !== i + 1);
-  return `<h3>スリット隊形 ${changed ? '<span class="note">進入変更あり</span>' : ""}</h3>
-    <div class="slit">${order.map((n, i) => `<div class="slit-row" style="top:${20 + i * 30}px">
-      <div class="slit-lane">${lane(n)}<small>${realtimeCourse(last[n], n)}コース</small></div>
-      <div class="boatmark" style="left:calc(${pos(n)}% - 14px);background:${boatColor(n)};color:${n === 1 || n === 5 ? "#111" : "#fff"}">${n}</div>
-      <div class="slit-st ${String(firstValue(last[n]?.st_raw, last[n]?.st, "")).startsWith("F") ? "f" : ""}">${safe(slitSt(n))}</div>
-    </div>`).join("")}</div>`;
+
+  return `
+    <h3>
+      スリット隊形
+      ${changed ? '<span class="note">進入変更あり</span>' : ""}
+    </h3>
+
+    <div class="slit">
+      <div class="slit-plot-frame">
+        <div class="slit-axis">
+          ${axisValues.map((item) => `
+            <span
+              class="${item.start ? "start" : ""}"
+              style="left:${axisPosition(item.value)}%"
+            >${item.label}</span>
+          `).join("")}
+        </div>
+
+        <div class="slit-start-line"></div>
+        <div class="slit-start-label">スタートライン</div>
+      </div>
+
+      <div class="slit-st-head">ST</div>
+
+      ${order.map((n, i) => {
+        const raw = slitRaw(n);
+        const isFlying = raw.toUpperCase().startsWith("F");
+
+        return `
+          <div
+            class="slit-row"
+            style="top:${46 + i * 43}px"
+          >
+            <div class="slit-lane">
+              ${lane(n)}
+              <small>${realtimeCourse(last[n], n)}コース</small>
+            </div>
+
+            <div class="slit-plot">
+              <div
+  class="boatmark boatmark-${n}"
+  style="left:${boatPosition(n).toFixed(3)}%;"
+>
+  ${slitBoatSvg(n)}
+</div>
+            </div>
+
+            <div class="slit-st ${isFlying ? "f" : ""}">
+              ${safe(raw)}
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
 }
 
 function renderRealtime() {
