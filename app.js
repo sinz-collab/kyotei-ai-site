@@ -688,26 +688,72 @@ function pred() {
   if (legacy) {
     const oddsMap = raceData?.odds || legacy.odds || {};
 
-    const attachOdds = (rows) =>
-      (Array.isArray(rows) ? rows : []).map((item) => {
-        const combo = item.combo || item.combination || "";
-        const compactCombo = combo.replace(/-/g, "");
+    const normalizeLegacyTickets = (rows, defaultRole) =>
+      (Array.isArray(rows) ? rows : [])
+        .map((item) => {
+          const isString = typeof item === "string";
 
-        return {
-          ...item,
-          odds:
-            item.odds && item.odds !== "-"
-              ? item.odds
-              : oddsMap[combo] ??
-                oddsMap[compactCombo] ??
-                "-"
-        };
-      });
+          const combo = isString
+            ? item.trim()
+            : String(
+                item?.combo ||
+                item?.combination ||
+                item?.ticket ||
+                ""
+              ).trim();
 
-    legacy.ai = attachOdds(legacy.ai);
-    legacy.aiUpset = attachOdds(legacy.aiUpset);
+          if (!combo) return null;
+
+          const compactCombo = combo.replace(/-/g, "");
+          const existingOdds = isString ? null : item?.odds;
+
+          return {
+            ...(isString ? {} : item),
+            combo,
+            role:
+              (isString ? "" : item?.role || item?.category) ||
+              defaultRole,
+            prob:
+              isString
+                ? 0
+                : item?.prob ??
+                  item?.score_pct ??
+                  0,
+            odds:
+              existingOdds && existingOdds !== "-"
+                ? existingOdds
+                : oddsMap[combo] ??
+                  oddsMap[compactCombo] ??
+                  "-"
+          };
+        })
+        .filter(Boolean);
+
+    const mainTickets = normalizeLegacyTickets(
+      legacy.ai,
+      "本線"
+    );
+
+    const deviationTickets = normalizeLegacyTickets(
+      legacy.balance,
+      "ずらし"
+    );
+
+    const upsetTickets = normalizeLegacyTickets(
+      legacy.aiUpset,
+      "荒れ"
+    );
+
+    legacy.ai = [
+      ...mainTickets,
+      ...deviationTickets
+    ];
+
+    legacy.aiUpset = upsetTickets;
+
     return legacy;
   }
+
   const source = raceData?.prediction;
   if (!source) return {};
 
