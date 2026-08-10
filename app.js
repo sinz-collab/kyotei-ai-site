@@ -744,14 +744,14 @@ function pred() {
       "荒れ"
     );
 
-    legacy.ai = [
-      ...mainTickets,
-      ...deviationTickets
-    ];
-
-    legacy.aiUpset = upsetTickets;
-
-    return legacy;
+    return {
+      ...legacy,
+      ai: [
+        ...mainTickets,
+        ...deviationTickets
+      ],
+      aiUpset: upsetTickets
+    };
   }
 
   const source = raceData?.prediction;
