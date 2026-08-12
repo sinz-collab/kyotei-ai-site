@@ -64,6 +64,49 @@ const pct1 = (v) => {
   return Number.isFinite(n) ? `${n.toFixed(1)}%` : "-";
 };
 
+const WIND_DIRECTIONS = [
+  ["↑", "北"],
+  ["↑", "北北東"],
+  ["↗", "北東"],
+  ["↗", "東北東"],
+  ["→", "東"],
+  ["↘", "東南東"],
+  ["↘", "南東"],
+  ["↓", "南南東"],
+  ["↓", "南"],
+  ["↙", "南南西"],
+  ["↙", "南西"],
+  ["←", "西南西"],
+  ["←", "西"],
+  ["↖", "西北西"],
+  ["↖", "北西"],
+  ["↑", "北北西"],
+];
+
+function formatWindDirection(value) {
+  if (value === undefined || value === null || String(value).trim() === "" || String(value).trim() === "-") return "-";
+  const raw = String(value).trim();
+  if (/^\d+$/.test(raw)) {
+    const code = Number(raw);
+    if (code === 17) return "無風";
+    const direction = WIND_DIRECTIONS[code - 1];
+    return direction ? `${direction[0]} ${direction[1]}` : "-";
+  }
+
+  const normalized = raw.toUpperCase().replace(/[\s_-]/g, "");
+  if (["無風", "静穏", "CALM"].includes(normalized)) return "無風";
+  const aliases = {
+    N: "北", NNE: "北北東", NE: "北東", ENE: "東北東",
+    E: "東", ESE: "東南東", SE: "南東", SSE: "南南東",
+    S: "南", SSW: "南南西", SW: "南西", WSW: "西南西",
+    W: "西", WNW: "西北西", NW: "北西", NNW: "北北西",
+  };
+  const label = aliases[normalized] || WIND_DIRECTIONS.map((direction) => direction[1]).find((name) => name === raw);
+  if (!label) return "-";
+  const direction = WIND_DIRECTIONS.find((item) => item[1] === label);
+  return `${direction[0]} ${direction[1]}`;
+}
+
 function dataUrls(path) {
   const cleanPath = String(path).replace(/^\//, "");
   return DATA_BASES.map((base) => `${base}/${cleanPath}?t=${Date.now()}`);
@@ -1427,6 +1470,7 @@ function renderRealtime() {
   const original = rowMap(rt.original || rt.originalExhibition || rt.sum || rt.display);
   const weather = rt.weather || {};
   const windDirection = weather.windDirection || weather.windDir || weather.wind_dir || weather.wind_direction;
+  const windDirectionDisplay = formatWindDirection(windDirection);
   const windSpeed = weather.wind || weather.windSpeed || weather.wind_speed;
   const waveHeight = weather.wave || weather.waveHeight || weather.wave_height;
   const hasLast = Object.keys(last).length > 0;
@@ -1434,24 +1478,25 @@ function renderRealtime() {
   return `<div class="card"><h2>直前情報</h2>
       <div class="refresh-row"><button id="fetchRealtimeButton" class="refresh-btn" onclick="fetchRealtimeNow()">直前・展示を取得して反映</button><button onclick="refreshCurrentVenue()">JSONだけ再読み込み</button><button onclick="setLocalRealtimeApi()">API設定</button><span class="note">PC側のローカルAPIが起動中なら取得から公開まで実行します。</span></div>
       <div id="realtimeActionStatus" class="action-status ${realtimeActionState.cls}">${esc(realtimeActionState.text)}</div>
-      <div class="note">天候 ${safe(weather.weather)} / 風向 ${safe(windDirection)} / 風速 ${safe(windSpeed)}m / 波 ${safe(waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
+      <div class="note">天候 ${safe(weather.weather)} / 風向 ${windDirectionDisplay} / 風速 ${safe(windSpeed)}m / 波 ${safe(waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
       ${hasLast ? `<table><tr><th>枠</th><th>展示</th><th>ST</th><th>チルト</th><th>部品</th></tr>
         ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(firstValue(last[n]?.time, last[n]?.displayTime), valueRankClass(last, n, firstValue(last[n]?.time, "") !== "" ? "time" : "displayTime"))}</td><td>${safe(firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST))}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
       </table>` : `<div class="note">直前情報はまだ未取得です。</div>`}
       ${renderSlit(rt)}
-      <h3>オリジナル展示</h3>
-      ${hasOriginal ? `<table><tr><th>枠</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
-        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(original[n]?.lap, valueRankClass(original, n, "lap"))}</td><td>${timeBadge(original[n]?.turn, valueRankClass(original, n, "turn"))}</td><td>${timeBadge(original[n]?.line || original[n]?.straight, valueRankClass(original, n, original[n]?.line ? "line" : "straight"))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, "exhibition_time"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(firstValue(original[n]?.sum_diff, original[n]?.diff))}</td></tr>`).join("")}
-      </table>` : `<div class="note">オリジナル展示はまだ未取得です。</div>`}
     </div>
     <div class="card"><h2>水面気象</h2>
       <div class="stats">
         <div class="stat"><span>天候</span><b>${safe(weather.weather)}</b></div>
-        <div class="stat"><span>風向</span><b>${safe(windDirection)}</b></div>
+        <div class="stat"><span>風向</span><b>${windDirectionDisplay}</b></div>
         <div class="stat"><span>風速</span><b>${safe(windSpeed)}</b></div>
         <div class="stat"><span>波高</span><b>${safe(waveHeight)}</b></div>
       </div>
       <div class="note">データが取得済みになると、このタブに自動で反映されます。</div>
+    </div>
+    <div class="card"><h2>オリジナル展示</h2>
+      ${hasOriginal ? `<div class="table-scroll"><table><tr><th>枠</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
+        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(original[n]?.lap, valueRankClass(original, n, "lap"))}</td><td>${timeBadge(original[n]?.turn, valueRankClass(original, n, "turn"))}</td><td>${timeBadge(original[n]?.line || original[n]?.straight, valueRankClass(original, n, original[n]?.line ? "line" : "straight"))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, "exhibition_time"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(firstValue(original[n]?.sum_diff, original[n]?.diff))}</td></tr>`).join("")}
+      </table></div>` : `<div class="note">オリジナル展示はまだ未取得です。</div>`}
     </div>`;
 }
 

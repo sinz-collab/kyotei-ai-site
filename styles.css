@@ -51,6 +51,9 @@ button:disabled{opacity:.62;cursor:wait}
 .stat.rank1{background:#fff0ea;border-color:#ffc9b8}.stat.rank2{background:#fff8c7;border-color:#f7e58a}
 .stat span,.probcard span{display:block;font-size:10px;color:var(--muted)}.stat b,.probcard b{font-size:17px}
 table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px solid #edf2f7;padding:7px;text-align:center}th{background:#f8fafc;color:#667085}
+.table-scroll{max-width:100%;overflow-x:auto;contain:inline-size;-webkit-overflow-scrolling:touch}
+.table-scroll table{min-width:100%;table-layout:fixed}
+.table-scroll th,.table-scroll td{padding-left:4px;padding-right:4px;overflow-wrap:anywhere}
 .prob-table td b{display:block}.prob-delta{display:inline-block;margin-top:2px;font-size:10px;font-weight:950}.prob-delta.up{color:#dc2626}.prob-delta.down{color:#2563eb}.prob-delta.flat{color:#94a3b8}
 .adjusted-prob{display:block;margin-top:3px;font-size:10px;font-weight:950;color:#0f766e;line-height:1.25}.adjusted-prob.pending{color:#94a3b8}
 .flow-steps{display:grid;grid-template-columns:1fr;gap:4px;margin:8px 0}.flow-steps span{display:block;border-radius:7px;padding:5px 7px;font-size:11px;font-weight:950}.flow-steps .done{background:#ecfdf5;color:#047857}.flow-steps .wait{background:#f1f5f9;color:#64748b}
