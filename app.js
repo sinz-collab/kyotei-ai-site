@@ -566,16 +566,71 @@ async function loadLiveRace() {
   }
 }
 
+function hasCompletedFinalPrediction(raceData) {
+  const finalPrediction = raceData?.predictionFinal;
+  return Boolean(
+    finalPrediction
+    && finalPrediction.phase === "final"
+    && finalPrediction.finalPredictionStatus === "complete"
+  );
+}
+
+async function refreshWakamatsuVenuePayload() {
+  if (currentVenueSlug !== "wakamatsu" || !currentPayload) return false;
+
+  const venueSlug = currentVenueSlug;
+  const payloadDate = currentPayload.date;
+  const venue = manifest?.venues?.find((item) => item.slug === venueSlug);
+  if (!venue?.dataPath) return false;
+
+  const latestPayload = await fetchJson(venue.dataPath);
+  const races = Array.isArray(latestPayload.races) ? latestPayload.races : [];
+  const complete = races.length === 12 && races.every((raceData) =>
+    Array.isArray(raceData.racers) && raceData.racers.length === 6
+  );
+  const hasFinal = races.some(hasCompletedFinalPrediction);
+
+  // Do not let a response from an old venue/date replace a view opened while fetching.
+  if (
+    currentVenueSlug !== venueSlug
+    || currentPayload?.date !== payloadDate
+    || latestPayload.date !== payloadDate
+    || latestPayload.date !== venue.date
+    || !complete
+    || !hasFinal
+  ) return false;
+
+  const previousRaces = new Map(
+    (currentPayload.races || []).map((raceData) => [Number(raceData.race), raceData])
+  );
+  for (const raceData of races) {
+    const previousPre = previousRaces.get(Number(raceData.race))?.predictionPre;
+    if (!raceData.predictionPre && previousPre) raceData.predictionPre = previousPre;
+  }
+
+  latestPayload.venue = latestPayload.venue || venue.name;
+  latestPayload.date = latestPayload.date || venue.date || manifest.date;
+  latestPayload.eventDayLabel = latestPayload.eventDayLabel || venue.eventDayLabel || "";
+  latestPayload.eventDay = latestPayload.eventDay || venue.eventDay || "";
+  currentPayload = latestPayload;
+  return true;
+}
+
 function startLiveRefresh() {
   if (liveRefreshTimer) clearInterval(liveRefreshTimer);
+  let refreshInFlight = false;
   liveRefreshTimer = setInterval(async () => {
-    if (document.hidden || !currentVenueSlug || !currentPayload) return;
+    if (document.hidden || !currentVenueSlug || !currentPayload || refreshInFlight) return;
+    refreshInFlight = true;
     try {
+      await refreshWakamatsuVenuePayload();
       await loadLiveRace();
       renderPane();
       $("syncState").textContent = "LIVE JSON";
     } catch (_) {
       $("syncState").textContent = "LIVE待機";
+    } finally {
+      refreshInFlight = false;
     }
   }, 4 * 60 * 1000);
 }
