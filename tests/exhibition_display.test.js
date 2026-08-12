@@ -4,7 +4,7 @@ const vm = require("node:vm");
 const path = require("node:path");
 
 const appSource = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
-const start = appSource.indexOf("function normalizedExhibitionTime");
+const start = appSource.indexOf("function completeSixLaneRows");
 const end = appSource.indexOf("async function loadLiveRace");
 assert.ok(start >= 0 && end > start);
 
@@ -19,7 +19,8 @@ vm.createContext(context);
 vm.runInContext(
   `${appSource.slice(start, end)}
    globalThis.normalizedExhibitionTimeForTest = normalizedExhibitionTime;
-   globalThis.mergeOriginalExhibitionRowsForTest = mergeOriginalExhibitionRows;`,
+   globalThis.mergeOriginalExhibitionRowsForTest = mergeOriginalExhibitionRows;
+   globalThis.completeOriginalExhibitionRowsForTest = completeOriginalExhibitionRows;`,
   context,
 );
 
@@ -40,6 +41,31 @@ const originals = [36.78, 37.21, 37.81, 37.38, 37.82, 37.71].map((value, index) 
   turn_time: 7.5 + index / 10,
   straight_time: 7.7 + index / 100,
 }));
+assert.equal(
+  context.completeOriginalExhibitionRowsForTest({
+    status: "complete",
+    complete: true,
+    data: { entries: originals },
+  }).length,
+  6,
+);
+assert.equal(
+  context.completeOriginalExhibitionRowsForTest({
+    status: "pending",
+    complete: false,
+    data: { entries: [] },
+  }),
+  null,
+);
+assert.equal(
+  context.completeOriginalExhibitionRowsForTest({
+    status: "complete",
+    complete: true,
+    data: { entries: exhibitions },
+  }),
+  null,
+  "normal exhibition rows must not count as original exhibition",
+);
 const existing = {
   1: { protected_original_field: "keep" },
 };

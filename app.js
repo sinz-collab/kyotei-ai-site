@@ -252,6 +252,15 @@ function completeSixLaneRows(document, key) {
     : null;
 }
 
+function completeOriginalExhibitionRows(document) {
+  const rows = completeSixLaneRows(document, "entries");
+  if (!rows) return null;
+  return rows.every((row) => ["lap_time", "turn_time", "straight_time"]
+    .every((key) => positiveNumber(row[key]) !== null))
+    ? rows
+    : null;
+}
+
 function rankRows(rows, valueKey) {
   const ranked = rows
     .map((row) => ({ lane: Number(row.lane), value: num(row[valueKey], NaN) }))
@@ -367,6 +376,7 @@ function applyLivePredictionReview(prediction, documents) {
 function isVerifiedTokonameFinalPrediction(prediction) {
   const run = prediction?.engine_run || {};
   const inputs = new Set(Array.isArray(run.inputs) ? run.inputs : []);
+  const originalAvailable = prediction?.original_exhibition_available;
   return prediction?.engine === "tokoname_engine"
     && prediction?.engine_version === "1.6"
     && prediction?.prediction_phase === "final"
@@ -374,8 +384,11 @@ function isVerifiedTokonameFinalPrediction(prediction) {
     && prediction?.engine_recalculated_after_exhibition === true
     && run.completed === true
     && run.source_engine === "tokoname_engine_v1.6"
-    && ["morning", "direct", "exhibition", "original_exhibition", "odds"]
+    && typeof originalAvailable === "boolean"
+    && ["morning", "direct", "exhibition", "odds"]
       .every((name) => inputs.has(name))
+    && inputs.has("original_exhibition") === originalAvailable
+    && prediction?.data_flags?.original_exhibition_available === originalAvailable
     && prediction?.data_flags?.odds_used_for_probability === false;
 }
 
@@ -514,13 +527,12 @@ async function loadLiveRace() {
       },
     ]));
   }
-  if (
-    validLiveDocument(original, "original_exhibition")
-    || validLiveDocument(exhibition, "exhibition")
-  ) {
+  const originalRows = completeOriginalExhibitionRows(original);
+  realtime.originalExhibitionAvailable = Boolean(originalRows);
+  if (originalRows) {
     realtime.original = mergeOriginalExhibitionRows(
       realtime.original || {},
-      validLiveDocument(original, "original_exhibition") ? original.data.entries : [],
+      originalRows,
       validLiveDocument(exhibition, "exhibition") ? exhibition.data.entries : [],
     );
   }
@@ -1491,7 +1503,12 @@ function renderRealtime() {
   const windSpeed = weather.wind || weather.windSpeed || weather.wind_speed;
   const waveHeight = weather.wave || weather.waveHeight || weather.wave_height;
   const hasLast = Object.keys(last).length > 0;
-  const hasOriginal = Object.keys(original).length > 0;
+  const hasOriginal = rt.originalExhibitionAvailable === true
+    && [1, 2, 3, 4, 5, 6].every((laneNo) => {
+      const row = original[String(laneNo)] || original[laneNo] || {};
+      return [row.lap, row.turn, row.line || row.straight]
+        .every((value) => positiveNumber(value) !== null);
+    });
   return `<div class="card"><h2>直前情報</h2>
       <div class="refresh-row"><button id="fetchRealtimeButton" class="refresh-btn" onclick="fetchRealtimeNow()">直前・展示を取得して反映</button><button onclick="refreshCurrentVenue()">JSONだけ再読み込み</button><button onclick="setLocalRealtimeApi()">API設定</button><span class="note">PC側のローカルAPIが起動中なら取得から公開まで実行します。</span></div>
       <div id="realtimeActionStatus" class="action-status ${realtimeActionState.cls}">${esc(realtimeActionState.text)}</div>
