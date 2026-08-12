@@ -4,6 +4,11 @@ const vm = require("node:vm");
 const path = require("node:path");
 
 const appSource = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
+assert.match(
+  appSource,
+  /currentPredictionAvailable && currentVenueSlug !== "tokoname"/,
+  "Tokoname must not use the browser-side live prediction review",
+);
 const start = appSource.indexOf("function normalizeProbabilityMap");
 const end = appSource.indexOf("async function loadLiveRace");
 assert.ok(start >= 0 && end > start);
@@ -17,7 +22,8 @@ const context = {
 vm.createContext(context);
 vm.runInContext(
   `${appSource.slice(start, end)}
-   globalThis.applyLivePredictionReviewForTest = applyLivePredictionReview;`,
+   globalThis.applyLivePredictionReviewForTest = applyLivePredictionReview;
+   globalThis.isVerifiedTokonameFinalPredictionForTest = isVerifiedTokonameFinalPrediction;`,
   context,
 );
 
@@ -92,5 +98,24 @@ startOnlyChanged.exhibition.data.entries.forEach((row, index) => {
 const startPrediction = prediction();
 context.applyLivePredictionReviewForTest(startPrediction, startOnlyChanged);
 assert.deepEqual(startPrediction.win, reviewed.win);
+
+const verifiedFinal = {
+  engine: "tokoname_engine",
+  engine_version: "1.6",
+  prediction_phase: "final",
+  stage: "final",
+  engine_recalculated_after_exhibition: true,
+  engine_run: {
+    completed: true,
+    source_engine: "tokoname_engine_v1.6",
+    inputs: ["morning", "direct", "exhibition", "original_exhibition", "odds"],
+  },
+  data_flags: { odds_used_for_probability: false },
+};
+assert.equal(context.isVerifiedTokonameFinalPredictionForTest(verifiedFinal), true);
+assert.equal(
+  context.isVerifiedTokonameFinalPredictionForTest({ ...verifiedFinal, stage: undefined }),
+  false,
+);
 
 console.log("live prediction review tests passed");

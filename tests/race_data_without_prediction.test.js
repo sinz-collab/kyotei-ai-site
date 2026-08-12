@@ -3,7 +3,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const source = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
+const source = fs
+  .readFileSync(path.join(__dirname, "..", "app.js"), "utf8")
+  .replace(/\r\n?/g, "\n");
 const start = source.indexOf("function renderTop()");
 const end = source.indexOf("async function openVenue", start);
 assert.ok(start >= 0 && end > start);
@@ -40,7 +42,7 @@ assert.match(nodes.venueGrid.innerHTML, /当日用予想データ未生成/);
 assert.match(nodes.venueGrid.innerHTML, /レース情報を見る/);
 assert.doesNotMatch(nodes.venueGrid.innerHTML, /本日データなし/);
 
-assert(source.includes("if (currentPredictionAvailable) {\n    applyLivePredictionReview("));
+assert(source.includes('if (currentPredictionAvailable && currentVenueSlug !== "tokoname") {\n    applyLivePredictionReview('));
 assert(source.includes("const rt = race().live || p.realtime || {};"));
 assert(source.includes("const odds = race().odds || prediction.odds || {};"));
 assert(source.includes("const p = pred(), r = race().result || p.result || {};"));

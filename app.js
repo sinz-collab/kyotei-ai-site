@@ -364,6 +364,21 @@ function applyLivePredictionReview(prediction, documents) {
   return true;
 }
 
+function isVerifiedTokonameFinalPrediction(prediction) {
+  const run = prediction?.engine_run || {};
+  const inputs = new Set(Array.isArray(run.inputs) ? run.inputs : []);
+  return prediction?.engine === "tokoname_engine"
+    && prediction?.engine_version === "1.6"
+    && prediction?.prediction_phase === "final"
+    && prediction?.stage === "final"
+    && prediction?.engine_recalculated_after_exhibition === true
+    && run.completed === true
+    && run.source_engine === "tokoname_engine_v1.6"
+    && ["morning", "direct", "exhibition", "original_exhibition", "odds"]
+      .every((name) => inputs.has(name))
+    && prediction?.data_flags?.odds_used_for_probability === false;
+}
+
 function normalizedExhibitionTime(value) {
   if (value === undefined || value === null || value === "" || value === "-") return null;
   const parsed = Number(String(value).trim());
@@ -520,7 +535,9 @@ async function loadLiveRace() {
       fetchedAt: odds.fetched_at,
     };
   }
-  if (currentPredictionAvailable) {
+  // Tokoname final predictions must come from the server-side existing engine.
+  // Keep this legacy browser review available to other venues only.
+  if (currentPredictionAvailable && currentVenueSlug !== "tokoname") {
     applyLivePredictionReview(prediction, { direct, exhibition, original_exhibition: original, odds });
   }
   if (validLiveDocument(result, "result")) {
@@ -1541,11 +1558,14 @@ function renderPrediction() {
   const tickets = p[ticketMode] || [];
   const showDeltas = p.probabilityReviewStatus === "reviewed";
   const flow = p.probabilityFlow || {};
-  const isFinalStage =
-    s.label === "本予想" ||
-    s.badge === "本予想" ||
-    flow.reviewed ||
-    showDeltas;
+  const isFinalStage = currentVenueSlug === "tokoname"
+    ? isVerifiedTokonameFinalPrediction(p)
+    : (
+      s.label === "本予想" ||
+      s.badge === "本予想" ||
+      flow.reviewed ||
+      showDeltas
+    );
 
   const stageLabel = isFinalStage ? "本予想" : "仮予想";
   const stageStatus = isFinalStage
