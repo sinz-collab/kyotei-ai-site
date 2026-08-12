@@ -110,9 +110,36 @@ const verifiedFinal = {
     source_engine: "tokoname_engine_v1.6",
     inputs: ["morning", "direct", "exhibition", "original_exhibition", "odds"],
   },
-  data_flags: { odds_used_for_probability: false },
+  original_exhibition_available: true,
+  data_flags: {
+    original_exhibition_available: true,
+    odds_used_for_probability: false,
+  },
 };
 assert.equal(context.isVerifiedTokonameFinalPredictionForTest(verifiedFinal), true);
+const verifiedWithoutOriginal = {
+  ...verifiedFinal,
+  original_exhibition_available: false,
+  engine_run: {
+    ...verifiedFinal.engine_run,
+    inputs: ["morning", "direct", "exhibition", "odds"],
+  },
+  data_flags: {
+    ...verifiedFinal.data_flags,
+    original_exhibition_available: false,
+  },
+};
+assert.equal(
+  context.isVerifiedTokonameFinalPredictionForTest(verifiedWithoutOriginal),
+  true,
+);
+assert.equal(
+  context.isVerifiedTokonameFinalPredictionForTest({
+    ...verifiedWithoutOriginal,
+    engine_run: verifiedFinal.engine_run,
+  }),
+  false,
+);
 assert.equal(
   context.isVerifiedTokonameFinalPredictionForTest({ ...verifiedFinal, stage: undefined }),
   false,
