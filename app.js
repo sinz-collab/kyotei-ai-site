@@ -20,6 +20,7 @@ let currentPane = "entry";
 let currentPredictionAvailable = true;
 let ticketMode = "ai";
 let liveRefreshTimer = null;
+const betBuilderStates = new Map();
 let realtimeActionState = { cls: "idle", text: "ボタンを押すと取得・反映状況をここに表示します。" };
 const DEFAULT_LOCAL_REALTIME_API = window.KYOTEI_LOCAL_REALTIME_API || "http://127.0.0.1:8765";
 const LOCAL_REALTIME_TOKEN = window.KYOTEI_LOCAL_REALTIME_TOKEN || "sinz-local-realtime";
@@ -728,7 +729,7 @@ async function openVenue(slug, route = {}) {
   currentPayload.eventDayLabel = currentPayload.eventDayLabel || v.eventDayLabel || "";
   currentPayload.eventDay = currentPayload.eventDay || v.eventDay || "";
   currentRaceNo = races.some((r) => Number(r.race) === Number(route.race)) ? Number(route.race) : (races[0]?.race || 1);
-  currentPane = ["entry", "compare", "realtime", "tide", "odds", "prediction", "logs", "result"].includes(route.pane) ? route.pane : "entry";
+  currentPane = ["entry", "compare", "realtime", "tide", "odds", "prediction", "bet-builder", "logs", "result"].includes(route.pane) ? route.pane : "entry";
   $("syncState").textContent = "LIVE JSON";
   showView("race");
   renderRace();
@@ -980,6 +981,7 @@ function renderPane() {
     realtime: renderRealtime,
     tide: renderTide,
     prediction: renderPrediction,
+    "bet-builder": renderBetBuilder,
     logs: renderLogs,
     result: renderResult,
     odds: renderOdds,
@@ -1776,6 +1778,183 @@ function oddsClass(value) {
   if (n <= 10) return "hot";
   if (n <= 30) return "warm";
   return "";
+}
+
+function betBuilderKey() {
+  return `${currentPayload?.date || ""}:${currentVenueSlug}:${currentRaceNo}`;
+}
+
+function betBuilderState() {
+  const key = betBuilderKey();
+  if (!betBuilderStates.has(key)) {
+    betBuilderStates.set(key, {
+      selections: { 1: new Set(), 2: new Set(), 3: new Set() },
+      groups: [],
+      nextGroupNo: 1,
+    });
+  }
+  return betBuilderStates.get(key);
+}
+
+function currentTrifectaOdds(combo) {
+  const prediction = pred();
+  const odds = race().odds || prediction.odds || {};
+  return odds[combo] ?? odds[combo.replaceAll("-", "")] ?? "-";
+}
+
+function formatMoney(value) {
+  return `${Math.round(num(value, 0)).toLocaleString("ja-JP")}円`;
+}
+
+function toggleBetLane(place, laneNo) {
+  const selected = betBuilderState().selections[Number(place)];
+  const laneNumber = Number(laneNo);
+  if (selected.has(laneNumber)) selected.delete(laneNumber);
+  else selected.add(laneNumber);
+  renderPane();
+}
+
+function toggleBetAll(place) {
+  const selected = betBuilderState().selections[Number(place)];
+  if (selected.size === 6) selected.clear();
+  else [1, 2, 3, 4, 5, 6].forEach((laneNo) => selected.add(laneNo));
+  renderPane();
+}
+
+function clearBetSelections() {
+  const state = betBuilderState();
+  [1, 2, 3].forEach((place) => state.selections[place].clear());
+  renderPane();
+}
+
+function addBetFormation() {
+  const state = betBuilderState();
+  const existing = new Set(state.groups.flatMap((group) => group.tickets.map((ticket) => ticket.combo)));
+  const tickets = [];
+  state.selections[1].forEach((first) => {
+    state.selections[2].forEach((second) => {
+      state.selections[3].forEach((third) => {
+        if (first === second || first === third || second === third) return;
+        const combo = `${first}-${second}-${third}`;
+        if (existing.has(combo)) return;
+        existing.add(combo);
+        tickets.push({ combo, amount: 100, selected: false });
+      });
+    });
+  });
+  if (!tickets.length) return;
+  state.groups.push({ number: state.nextGroupNo++, tickets });
+  renderPane();
+}
+
+function setBetSelected(groupNo, combo, selected) {
+  const group = betBuilderState().groups.find((item) => item.number === Number(groupNo));
+  const ticket = group?.tickets.find((item) => item.combo === combo);
+  if (ticket) ticket.selected = Boolean(selected);
+  renderBetSummary();
+}
+
+function toggleAllBets() {
+  const tickets = betBuilderState().groups.flatMap((group) => group.tickets);
+  const selectAll = tickets.some((ticket) => !ticket.selected);
+  tickets.forEach((ticket) => { ticket.selected = selectAll; });
+  renderPane();
+}
+
+function deleteSelectedBets() {
+  const state = betBuilderState();
+  state.groups.forEach((group) => {
+    group.tickets = group.tickets.filter((ticket) => !ticket.selected);
+  });
+  state.groups = state.groups.filter((group) => group.tickets.length > 0);
+  renderPane();
+}
+
+function deleteAllBets() {
+  betBuilderState().groups = [];
+  renderPane();
+}
+
+function setAllBetAmounts() {
+  betBuilderState().groups.forEach((group) => {
+    group.tickets.forEach((ticket) => { ticket.amount = 100; });
+  });
+  renderPane();
+}
+
+function updateBetAmount(groupNo, combo, value) {
+  const group = betBuilderState().groups.find((item) => item.number === Number(groupNo));
+  const ticket = group?.tickets.find((item) => item.combo === combo);
+  if (!ticket) return;
+  ticket.amount = Math.max(0, Math.round(num(value, 0) / 100) * 100);
+  renderPane();
+}
+
+function inputBetAmount(groupNo, combo, value, input) {
+  const amount = num(value, NaN);
+  if (!Number.isFinite(amount) || amount < 0 || amount % 100 !== 0) return;
+  const group = betBuilderState().groups.find((item) => item.number === Number(groupNo));
+  const ticket = group?.tickets.find((item) => item.combo === combo);
+  if (!ticket) return;
+  ticket.amount = amount;
+  const odds = currentTrifectaOdds(combo);
+  const payout = input?.closest(".bet-ticket-row")?.querySelector(".bet-payout");
+  if (payout) payout.innerHTML = `<small>払戻金</small>${odds === "-" ? "-" : formatMoney(num(odds, 0) * amount)}`;
+  renderBetSummary();
+}
+
+function changeBetAmount(groupNo, combo, delta) {
+  const group = betBuilderState().groups.find((item) => item.number === Number(groupNo));
+  const ticket = group?.tickets.find((item) => item.combo === combo);
+  if (!ticket) return;
+  ticket.amount = Math.max(0, ticket.amount + Number(delta));
+  renderPane();
+}
+
+function renderBetSummary() {
+  const summary = $("betSummary");
+  if (!summary) return;
+  const tickets = betBuilderState().groups.flatMap((group) => group.tickets);
+  const total = tickets.reduce((sum, ticket) => sum + ticket.amount, 0);
+  summary.innerHTML = `<span>総買い目数 <b>${tickets.length}点</b></span><span>合計購入金額 <b>${formatMoney(total)}</b></span>`;
+}
+
+function renderBetBuilder() {
+  const state = betBuilderState();
+  const racers = race().racers || [];
+  const laneNames = Object.fromEntries(racers.map((racer) => [Number(racer.lane), safe(racer.name, "-")]));
+  const tickets = state.groups.flatMap((group) => group.tickets);
+  const allSelected = tickets.length > 0 && tickets.every((ticket) => ticket.selected);
+  const selectorRows = [1, 2, 3, 4, 5, 6].map((laneNo) => `<div class="bet-selector-row">
+    <div class="bet-racer">${lane(laneNo)}<span>${esc(laneNames[laneNo] || "-")}</span></div>
+    ${[1, 2, 3].map((place) => `<button type="button" class="bet-lane-button ${state.selections[place].has(laneNo) ? "active" : ""}" onclick="toggleBetLane(${place},${laneNo})" aria-pressed="${state.selections[place].has(laneNo)}">${laneNo}</button>`).join("")}
+  </div>`).join("");
+  const groupRows = state.groups.map((group, groupIndex) => `<section class="bet-group ${groupIndex ? "separated" : ""}">
+    <div class="bet-group-head"><b>追加${group.number}</b><span>${group.tickets.length}点</span></div>
+    ${group.tickets.map((ticket) => {
+      const odds = currentTrifectaOdds(ticket.combo);
+      const payout = odds === "-" ? "-" : formatMoney(num(odds, 0) * ticket.amount);
+      return `<div class="bet-ticket-row">
+        <label class="bet-check"><input type="checkbox" ${ticket.selected ? "checked" : ""} onchange="setBetSelected(${group.number},'${ticket.combo}',this.checked)"><span class="sr-only">${ticket.combo}を選択</span></label>
+        <b class="bet-combo">${ticket.combo}</b>
+        <span class="bet-odds"><small>オッズ</small>${esc(odds)}</span>
+        <div class="bet-amount"><button type="button" onclick="changeBetAmount(${group.number},'${ticket.combo}',-100)" aria-label="${ticket.combo}を100円減らす">−100円</button><input type="number" min="0" step="100" value="${ticket.amount}" oninput="inputBetAmount(${group.number},'${ticket.combo}',this.value,this)" onchange="updateBetAmount(${group.number},'${ticket.combo}',this.value)" aria-label="${ticket.combo}の購入金額"><button type="button" onclick="changeBetAmount(${group.number},'${ticket.combo}',100)" aria-label="${ticket.combo}を100円増やす">＋100円</button></div>
+        <span class="bet-payout"><small>払戻金</small>${payout}</span>
+      </div>`;
+    }).join("")}
+  </section>`).join("");
+  const total = tickets.reduce((sum, ticket) => sum + ticket.amount, 0);
+  return `<div class="card bet-builder-card">
+    <h2>3連単フォーメーション</h2>
+    <div class="bet-selector-head"><span>艇番・選手名</span><b>1着</b><b>2着</b><b>3着</b></div>
+    <div class="bet-selector">${selectorRows}<div class="bet-selector-row bet-all-row"><span>列を全選択</span>${[1, 2, 3].map((place) => `<button type="button" class="bet-all-button ${state.selections[place].size === 6 ? "active" : ""}" onclick="toggleBetAll(${place})">全</button>`).join("")}</div></div>
+    <div class="bet-builder-actions"><button type="button" onclick="clearBetSelections()">選択クリア</button><button type="button" class="primary" onclick="addBetFormation()">フォーメーション追加</button></div>
+  </div>
+  <div class="card bet-list-card">
+    <div class="bet-list-head"><h2>買い目一覧</h2><div class="bet-list-actions"><button type="button" class="${allSelected ? "active" : ""}" onclick="toggleAllBets()">全選択</button><button type="button" onclick="deleteSelectedBets()">選択削除</button><button type="button" onclick="deleteAllBets()">全削除</button><button type="button" onclick="setAllBetAmounts()">全て100円</button></div></div>
+    <div class="bet-list">${groupRows || `<div class="note bet-empty">買い目はまだありません。</div>`}</div>
+    <div class="bet-summary" id="betSummary"><span>総買い目数 <b>${tickets.length}点</b></span><span>合計購入金額 <b>${formatMoney(total)}</b></span></div>
+  </div>`;
 }
 
 function renderOdds() {
