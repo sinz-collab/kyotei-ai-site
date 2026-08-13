@@ -1999,6 +1999,48 @@ function finishBoat(n) {
   return `<span class="finish-boat ${cls}">${n}</span>`;
 }
 
+const mobilePaneSwipe = window.matchMedia("(max-width: 600px)");
+let paneSwipeStart = null;
+
+function isInsideHorizontalScroller(target) {
+  const pane = $("pane");
+  for (let node = target; node && node !== pane; node = node.parentElement) {
+    const overflowX = window.getComputedStyle(node).overflowX;
+    if (/^(auto|scroll)$/.test(overflowX) && node.scrollWidth > node.clientWidth) return true;
+  }
+  return false;
+}
+
+$("pane").addEventListener("touchstart", (event) => {
+  if (!mobilePaneSwipe.matches || event.touches.length !== 1 || isInsideHorizontalScroller(event.target)) {
+    paneSwipeStart = null;
+    return;
+  }
+  const touch = event.touches[0];
+  paneSwipeStart = { x: touch.clientX, y: touch.clientY };
+}, { passive: true });
+
+$("pane").addEventListener("touchend", (event) => {
+  if (!paneSwipeStart || !mobilePaneSwipe.matches || event.changedTouches.length !== 1) {
+    paneSwipeStart = null;
+    return;
+  }
+  const touch = event.changedTouches[0];
+  const dx = touch.clientX - paneSwipeStart.x;
+  const dy = touch.clientY - paneSwipeStart.y;
+  paneSwipeStart = null;
+  if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy) * 1.5) return;
+
+  const tabs = [...document.querySelectorAll(".subnav button")];
+  const currentIndex = tabs.findIndex((tab) => tab.dataset.pane === currentPane);
+  const nextTab = tabs[currentIndex + (dx < 0 ? 1 : -1)];
+  if (nextTab) nextTab.click();
+}, { passive: true });
+
+$("pane").addEventListener("touchcancel", () => {
+  paneSwipeStart = null;
+}, { passive: true });
+
 document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => showView(b.dataset.view));
 document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => {
   currentPane = b.dataset.pane;
