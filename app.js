@@ -974,7 +974,9 @@ async function selectRace(raceNo) {
   renderPane();
 }
 
-function renderPane() {
+let completePaneTransition = null;
+
+function paneMarkup(pane = currentPane) {
   const map = {
     entry: renderEntry,
     compare: renderCompare,
@@ -986,7 +988,71 @@ function renderPane() {
     result: renderResult,
     odds: renderOdds,
   };
-  $("pane").innerHTML = (map[currentPane] || renderEntry)();
+  return (map[pane] || renderEntry)();
+}
+
+function renderPane() {
+  if (completePaneTransition) completePaneTransition();
+  $("pane").innerHTML = paneMarkup();
+}
+
+function switchPane(nextPane) {
+  if (!nextPane || nextPane === currentPane) return;
+  if (completePaneTransition) completePaneTransition();
+
+  const tabs = [...document.querySelectorAll(".subnav button")];
+  const currentIndex = tabs.findIndex((tab) => tab.dataset.pane === currentPane);
+  const nextIndex = tabs.findIndex((tab) => tab.dataset.pane === nextPane);
+  const shouldSlide = mobilePaneSwipe.matches && currentIndex >= 0 && nextIndex >= 0;
+  const pane = $("pane");
+  const oldHeight = pane.offsetHeight;
+
+  currentPane = nextPane;
+  tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.pane === currentPane));
+  updateRoute();
+
+  if (!shouldSlide) {
+    pane.innerHTML = paneMarkup();
+    return;
+  }
+
+  const oldSlide = document.createElement("div");
+  const newSlide = document.createElement("div");
+  const slider = document.createElement("div");
+  oldSlide.className = "pane-slide";
+  newSlide.className = "pane-slide";
+  slider.className = "pane-slider";
+  while (pane.firstChild) oldSlide.appendChild(pane.firstChild);
+  newSlide.innerHTML = paneMarkup();
+
+  const forward = nextIndex > currentIndex;
+  slider.append(...(forward ? [oldSlide, newSlide] : [newSlide, oldSlide]));
+  slider.style.transform = `translateX(${forward ? 0 : -50}%)`;
+  pane.classList.add("pane-transitioning");
+  pane.style.height = `${oldHeight}px`;
+  pane.appendChild(slider);
+
+  const newHeight = newSlide.scrollHeight;
+  let finished = false;
+  let timeoutId;
+  const complete = () => {
+    if (finished) return;
+    finished = true;
+    window.clearTimeout(timeoutId);
+    pane.replaceChildren(...newSlide.childNodes);
+    pane.classList.remove("pane-transitioning");
+    pane.style.height = "";
+    completePaneTransition = null;
+  };
+  completePaneTransition = complete;
+  slider.addEventListener("transitionend", (event) => {
+    if (event.propertyName === "transform") complete();
+  }, { once: true });
+  timeoutId = window.setTimeout(complete, 260);
+
+  slider.getBoundingClientRect();
+  pane.style.height = `${newHeight}px`;
+  slider.style.transform = `translateX(${forward ? -50 : 0}%)`;
 }
 
 function rankClass(field, laneNo, lowerBetter = false) {
@@ -2042,12 +2108,7 @@ $("pane").addEventListener("touchcancel", () => {
 }, { passive: true });
 
 document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => showView(b.dataset.view));
-document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => {
-  currentPane = b.dataset.pane;
-  document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x === b));
-  updateRoute();
-  renderPane();
-});
+document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => switchPane(b.dataset.pane));
 $("backTop").onclick = () => showView("top");
 
 init();
