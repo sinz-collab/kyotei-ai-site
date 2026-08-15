@@ -42,7 +42,7 @@ assert.match(nodes.venueGrid.innerHTML, /当日用予想データ未生成/);
 assert.match(nodes.venueGrid.innerHTML, /レース情報を見る/);
 assert.doesNotMatch(nodes.venueGrid.innerHTML, /本日データなし/);
 
-assert(source.includes('if (currentPredictionAvailable && currentVenueSlug !== "tokoname") {\n    applyLivePredictionReview('));
+assert(source.includes('if (currentPredictionAvailable && !["tokoname", "toda"].includes(currentVenueSlug)) {\n    applyLivePredictionReview('));
 assert(source.includes("const rt = race().live || p.realtime || {};"));
 assert(source.includes("const odds = race().odds || prediction.odds || {};"));
 assert(source.includes("const p = pred(), r = race().result || p.result || {};"));

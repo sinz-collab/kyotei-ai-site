@@ -548,9 +548,9 @@ async function loadLiveRace() {
       fetchedAt: odds.fetched_at,
     };
   }
-  // Tokoname final predictions must come from the server-side existing engine.
+  // Tokoname final and Toda v6 predictions must come from their server-side engines.
   // Keep this legacy browser review available to other venues only.
-  if (currentPredictionAvailable && currentVenueSlug !== "tokoname") {
+  if (currentPredictionAvailable && !["tokoname", "toda"].includes(currentVenueSlug)) {
     applyLivePredictionReview(prediction, { direct, exhibition, original_exhibition: original, odds });
   }
   if (validLiveDocument(result, "result")) {
