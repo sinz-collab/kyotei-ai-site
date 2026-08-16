@@ -954,6 +954,10 @@ function predictionEngineLabel() {
     : "予想準備中";
 }
 
+function tideAvailable() {
+  return currentVenueSlug !== "biwako";
+}
+
 function renderRace() {
   const r = race();
   $("venueTitle").textContent = `${currentPayload.venue || "-"} ${currentRaceNo}R`;
@@ -962,7 +966,11 @@ function renderRace() {
   $("raceTabs").innerHTML = (currentPayload.races || []).map((x) =>
     `<button class="${Number(x.race) === Number(currentRaceNo) ? "active" : ""} ${raceClosed(x) ? "closed" : ""}" onclick="selectRace(${x.race})">${x.race}R</button>`
   ).join("");
-  document.querySelectorAll(".subnav button").forEach((x) => x.classList.toggle("active", x.dataset.pane === currentPane));
+  if (currentPane === "tide" && !tideAvailable()) currentPane = "entry";
+  document.querySelectorAll(".subnav button").forEach((x) => {
+    x.hidden = x.dataset.pane === "tide" && !tideAvailable();
+    x.classList.toggle("active", x.dataset.pane === currentPane);
+  });
   updateRoute();
   renderPane();
 }
@@ -1692,6 +1700,9 @@ function tideSvg(events) {
 
 function renderTide() {
   const p = pred(), z = p.tideZone || {}, t = currentPayload.tide || {}, events = t.events || [];
+  if (currentVenueSlug === "biwako") {
+    return `<div class="card"><h2>${currentPayload.venue || ""} 潮見表</h2><div class="note">この場では潮位・潮汐グラフを表示しません。</div></div>`;
+  }
   return `<div class="card"><h2>${currentPayload.venue || ""} 潮見表</h2>
     <div class="tide-type">${safe(t.tideType)}</div>
     <div class="note">${safe(t.date, "")} / ${safe(t.source, "")}<br>${safe(t.summary, "")}</div>
