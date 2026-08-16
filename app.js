@@ -1176,9 +1176,20 @@ function courseSummary(b) {
   </div>`;
 }
 
+function renderRaceInfoBadges(r) {
+  const badges = [];
+  if (r.type !== undefined && r.type !== null && r.type !== "") {
+    badges.push(`<span class="race-info-badge race-type">${esc(r.type)}</span>`);
+  }
+  if (r.entryFixed === true) {
+    badges.push('<span class="race-info-badge entry-fixed">進入固定</span>');
+  }
+  return badges.length ? `<span class="race-info-badges">${badges.join("")}</span>` : "";
+}
+
 function renderEntry() {
   const r = race();
-  return `<div class="card"><h2>${r.race}R 締切 ${safe(r.deadline)} <span class="note">${safe(r.type, "")}</span></h2>
+  return `<div class="card"><h2>${r.race}R 締切 ${safe(r.deadline)} ${renderRaceInfoBadges(r)}</h2>
   ${(r.racers || []).map((b) => `<div class="boat">${lane(b.lane)}<div>
     <div class="name">${safe(b.name)}${b.female ? " 💗" : ""}<span class="${gradeClass(b.class)}">${safe(b.class, "")}</span>${fBadge(b)}</div>
     <div class="sub">${safe(b.age)}歳 / ${safe(b.weight)}kg　${safe(b.branch)}支部 / ${safe(b.home)}出身 / ${safe(b.f, "")}</div>
