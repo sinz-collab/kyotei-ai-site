@@ -912,6 +912,7 @@ function pred() {
     win: source.probabilities?.win || source.win || {},
     second: source.probabilities?.second || source.second || {},
     third: source.probabilities?.third || source.third || {},
+    top3: source.probabilities?.top3 || source.top3 || {},
     sab: source.sab?.grade || source.sab || "-",
     ai: [
       ...ticketRows(source.tickets?.main, "本線"),
@@ -1748,6 +1749,7 @@ function renderPrediction() {
     }
     return `<b>${pct1(baseValue)}</b><span class="adjusted-prob pending">修正前 -</span>`;
   };
+  const hasTop3Probabilities = p.top3 && Object.keys(p.top3).length === 6;
   const probRows = [1,2,3,4,5,6].map((n) => {
     const review = p.probabilityReview?.[n] || p.probabilityReview?.[String(n)] || {};
     return `<tr>
@@ -1755,6 +1757,7 @@ function renderPrediction() {
       <td>${probCell(n, p.win, review, "win", "morningWin", "deltaWin")}</td>
       <td>${probCell(n, p.second, review, "second", "morningSecond", "deltaSecond")}</td>
       <td>${probCell(n, p.third, review, "third", "morningThird", "deltaThird")}</td>
+      ${hasTop3Probabilities ? `<td><b>${pct1(p.top3?.[n] ?? p.top3?.[String(n)])}</b></td>` : ""}
     </tr>`;
   }).join("");
   const flowNote = `<div class="flow-steps">
@@ -1776,7 +1779,7 @@ function renderPrediction() {
     <div class="note">軸候補：${r.axisLane ? r.axisLane + "号艇" : "-"} / ${safe(r.comment, "")}</div>
   </div>
   <div class="card"><h2>全艇確率</h2>${flowNote}${reviewNote}
-    <table class="prob-table"><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th></tr>${probRows}</table>
+    <table class="prob-table"><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th>${hasTop3Probabilities ? "<th>3着内</th>" : ""}</tr>${probRows}</table>
   </div>
   <div class="card"><h2>買い目</h2>
     <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">AI予想</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">AI荒れ予想</button></div>
