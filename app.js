@@ -882,7 +882,12 @@ function pred() {
     };
   }
 
-  const source = raceData?.prediction;
+  const source =
+  currentVenueSlug === "wakamatsu" &&
+  hasCompletedFinalPrediction(raceData)
+    ? raceData.predictionFinal
+    : raceData?.prediction;
+
   if (!source) return {};
 
   if (raceData._uiPrediction) {
