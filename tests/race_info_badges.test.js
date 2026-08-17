@@ -34,4 +34,15 @@ assert.doesNotMatch(render({ type: "一般", entryFixed: 1 }), /進入固定/);
 assert.equal(render({}), "");
 assert.match(render({ type: '<一般>' }), /&lt;一般&gt;/);
 
+assert.match(
+  source,
+  /\$\("venueTitle"\)\.innerHTML\s*=\s*`[^`]*\$\{renderRaceInfoBadges\(r\)\}[^`]*`/,
+  "the upper race heading must reuse renderRaceInfoBadges",
+);
+assert.match(
+  source,
+  /function renderEntry\(\)[\s\S]*?<h2>[^`]*\$\{renderRaceInfoBadges\(r\)\}/,
+  "the entry card must keep its existing badges",
+);
+
 console.log("race info badge tests passed");

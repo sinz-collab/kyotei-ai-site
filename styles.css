@@ -40,7 +40,7 @@ button:disabled{opacity:.62;cursor:wait}
 .action-status.running{background:#e7f5ff;border-color:#bfdbfe;color:#1765bd}
 .action-status.success{background:#ecfdf5;border-color:#bbf7d0;color:#047857}
 .action-status.error{background:#fff1f2;border-color:#fecdd3;color:#be123c}
-.race-head h1{margin:0;font-size:22px}.race-head p{margin:4px 0 0;color:var(--muted);font-size:12px;font-weight:800}
+.race-head h1{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:0;font-size:22px}.race-head h1 .race-info-badges{margin-left:0}.race-head p{margin:4px 0 0;color:var(--muted);font-size:12px;font-weight:800}
 .event-day-badge{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:4px 9px;border-radius:7px;background:#1765bd;color:#fff;font-size:14px;font-weight:950;line-height:1}
 .race-info-badges{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;vertical-align:middle;margin-left:5px}.race-info-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:950;line-height:1.2;white-space:nowrap}.race-type{background:#e7f5ff;color:#1765bd}.entry-fixed{background:#fff3cd;color:#8a5a00}
 .lane{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:10px;border:1px solid;font-weight:950}

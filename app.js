@@ -960,7 +960,7 @@ function tideAvailable() {
 
 function renderRace() {
   const r = race();
-  $("venueTitle").textContent = `${currentPayload.venue || "-"} ${currentRaceNo}R`;
+  $("venueTitle").innerHTML = `${esc(currentPayload.venue || "-")} ${currentRaceNo}R ${renderRaceInfoBadges(r)}`;
   const dayLabel = eventDayLabel();
   $("venueMeta").innerHTML = `${esc(currentPayload.date || "")} ${dayLabel ? `<span class="event-day-badge">${esc(dayLabel)}</span>` : ""}<br>締切 ${esc(r.deadline || "-")} / ${esc(predictionEngineLabel())}`;
   $("raceTabs").innerHTML = (currentPayload.races || []).map((x) =>
