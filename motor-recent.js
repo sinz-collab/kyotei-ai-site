@@ -20,6 +20,11 @@
     return Number.isFinite(n) ? n.toFixed(digits) : "-";
   };
 
+  const motorRateNum = (value) => {
+    const n = Number(String(value ?? '').replace('%' , ''));
+    return Number.isFinite(n) ? n : 0;
+  };
+
   const recentFor = (r, racer) => {
     if (racer?.motor_recent) return racer.motor_recent;
     const rows = Array.isArray(r?.motor_recent) ? r.motor_recent : [];
@@ -51,11 +56,18 @@
     </table></div>`;
   };
 
+  const motorRankClass = (r, racer) => {
+    const racers = Array.isArray(r?.racers) ? r.racers : [];
+    const ranked = racers.map((b) => ({ lane: Number(b.lane), score: motorRateNum(b.motor_2) * 0.45 + motorRateNum(b.motor_3) * 0.55 })).filter((b) => Number.isFinite(b.score)).sort((a, b) => b.score - a.score);
+    const rank = ranked.findIndex((b) => b.lane === Number(racer?.lane)) + 1;
+    return rank === 1 ? 'rank1' : rank === 2 ? 'rank2' : '';
+  };
+
   const desktopRow = (r, racer) => {
     const motor = recentFor(r, racer);
     const trend = trendMeta(motor?.trend);
-    return `<tr>
-      <td>${lane(racer.lane)}</td>
+    return `<tr class=${motorRankClass(r, racer)}>
+      <td>${lane(racer.lane)} <b class=motor-racer-name>${esc(safe(racer.name))}</b></td>
       <td><b>No.${esc(safe(racer.motor_no || motor?.motor_no))}</b></td>
       <td>${percent(racer.motor_2)}</td>
       <td>${percent(racer.motor_3)}</td>
@@ -71,9 +83,9 @@
   const mobileCard = (r, racer) => {
     const motor = recentFor(r, racer);
     const trend = trendMeta(motor?.trend);
-    return `<div class="motor-mobile-card">
+    return `<div class="motor-mobile-card ${motorRankClass(r, racer)}">
       <div class="motor-mobile-head">
-        <div>${lane(racer.lane)} <b>No.${esc(safe(racer.motor_no || motor?.motor_no))}</b></div>
+        <div>${lane(racer.lane)} <b class=motor-racer-name>${esc(safe(racer.name))}</b> <b>No.${esc(safe(racer.motor_no || motor?.motor_no))}</b></div>
         <span class="motor-trend ${trend[1]}">${trend[0]}</span>
       </div>
       <div class="motor-mobile-grid">
@@ -116,7 +128,7 @@
           ${racers.map((racer) => {
             const motor = recentFor(r, racer);
             return `<details class="motor-details">
-              <summary>${racer.lane}号艇 No.${esc(safe(racer.motor_no || motor?.motor_no))}　直近10走詳細</summary>
+              <summary>${racer.lane}号艇 ${esc(safe(racer.name))} No.${esc(safe(racer.motor_no || motor?.motor_no))}　直近10走詳細</summary>
               ${detailTable(motor)}
             </details>`;
           }).join("")}

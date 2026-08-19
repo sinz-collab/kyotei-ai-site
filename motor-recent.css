@@ -209,3 +209,24 @@
     margin-top: 10px;
   }
 }
+
+.motor-recent-table tr.rank1 td {
+  background: #fff0ea;
+}
+
+.motor-recent-table tr.rank2 td {
+  background: #fff8c7;
+}
+
+.motor-mobile-card.rank1 {
+  background: #fff0ea;
+}
+
+.motor-mobile-card.rank2 {
+  background: #fff8c7;
+}
+
+.motor-racer-name {
+  margin-left: 6px;
+  white-space: nowrap;
+}
