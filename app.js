@@ -1729,6 +1729,7 @@ function renderPrediction() {
   const isFinalStage = currentVenueSlug === "tokoname"
     ? isVerifiedTokonameFinalPrediction(p)
     : (
+      p.predictionStage === "final" ||
       s.label === "本予想" ||
       s.badge === "本予想" ||
       flow.reviewed ||
