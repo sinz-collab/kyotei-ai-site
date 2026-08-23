@@ -1235,7 +1235,7 @@ function localScore(b) {
 }
 
 function localStScore(b) {
-  const st = num(b.boaters_local_avg_st || b.local_avg_st || b.avg_st, 9);
+  const st = num(b.boaters_local_avg_st, 9);
   return st >= 9 ? 0 : Math.max(0, 100 - st * 420);
 }
 
@@ -1370,7 +1370,7 @@ function renderCompare() {
   const r = race();
   const rows = (r.racers || []).map((b) => {
     const ki = kimariteInfo(b), si = seasonCompareInfo(b);
-    const localSt = b.boaters_local_avg_st || b.local_avg_st || b.avg_st;
+    const localSt = b.boaters_local_avg_st;
     return {
       lane: b.lane,
       name: b.name,
