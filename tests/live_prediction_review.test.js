@@ -6,8 +6,8 @@ const path = require("node:path");
 const appSource = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 assert.match(
   appSource,
-  /currentPredictionAvailable && !\["tokoname", "toda", "wakamatsu"\]\.includes\(currentVenueSlug\)/,
-  "Tokoname, Toda, and Wakamatsu must not use the browser-side live prediction review",
+  /currentPredictionAvailable && !\["tokoname", "toda", "wakamatsu", "shimonoseki"\]\.includes\(currentVenueSlug\)/,
+  "Tokoname, Toda, Wakamatsu, and Shimonoseki must not use the browser-side live prediction review",
 );
 const start = appSource.indexOf("function normalizeProbabilityMap");
 const end = appSource.indexOf("async function loadLiveRace");
