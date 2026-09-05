@@ -6,8 +6,13 @@ const path = require("node:path");
 const appSource = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 assert.match(
   appSource,
-  /currentPredictionAvailable && !\["tokoname", "toda", "wakamatsu", "shimonoseki"\]\.includes\(currentVenueSlug\)/,
-  "Tokoname, Toda, Wakamatsu, and Shimonoseki must not use the browser-side live prediction review",
+  /currentPredictionAvailable && !\["tokoname", "toda", "wakamatsu", "shimonoseki", "fukuoka"\]\.includes\(currentVenueSlug\)/,
+  "Venue-specific server engines must not use the browser-side live prediction review",
+);
+assert.match(
+  appSource,
+  /if \(!\["wakamatsu", "fukuoka"\]\.includes\(currentVenueSlug\) \|\| !currentPayload\) return false;/,
+  "Fukuoka must reload the server-generated final venue payload",
 );
 const start = appSource.indexOf("function normalizeProbabilityMap");
 const end = appSource.indexOf("async function loadLiveRace");

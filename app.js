@@ -524,9 +524,9 @@ async function loadLiveRace() {
       fetchedAt: odds.fetched_at,
     };
   }
-  // Tokoname final and Toda v6 predictions must come from their server-side engines.
+  // Venue-specific final predictions must come from their server-side engines.
   // Keep this legacy browser review available to other venues only.
-  if (currentPredictionAvailable && !["tokoname", "toda", "wakamatsu", "shimonoseki"].includes(currentVenueSlug)) {
+  if (currentPredictionAvailable && !["tokoname", "toda", "wakamatsu", "shimonoseki", "fukuoka"].includes(currentVenueSlug)) {
     applyLivePredictionReview(prediction, { direct, exhibition, original_exhibition: original, odds });
   }
   if (validLiveDocument(result, "result")) {
@@ -553,7 +553,7 @@ function hasCompletedFinalPrediction(raceData) {
 }
 
 async function refreshWakamatsuVenuePayload() {
-  if (currentVenueSlug !== "wakamatsu" || !currentPayload) return false;
+  if (!["wakamatsu", "fukuoka"].includes(currentVenueSlug) || !currentPayload) return false;
 
   const venueSlug = currentVenueSlug;
   const payloadDate = currentPayload.date;
