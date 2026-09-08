@@ -29,8 +29,9 @@ button.active{background:var(--navy);color:#fff}
 .venue p{margin:0;color:#4b5563;font-size:9px;font-weight:800;line-height:1.25}
 .venue.off p{color:#94a3b8}
 .venue strong{display:none}
-.venue-status{display:flex;align-items:center;justify-content:center;gap:3px;width:100%;min-height:17px;padding:2px 1px;border-radius:2px;font-size:9px;font-weight:950;line-height:1.1}
+.venue-status{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:2px 1px;width:100%;min-height:17px;padding:2px 1px;border-radius:2px;font-size:9px;font-weight:950;line-height:1.1}
 .venue-status b{font-size:10px;line-height:1}
+.venue-status .venue-event-label{display:inline;font-size:8px;line-height:1;white-space:nowrap}
 .venue-status.on{background:#1765bd;color:#fff}
 .venue-status.off{background:#d7dee8;color:#64748b}
 .back{margin-bottom:10px;background:#eef3f8;color:#1765bd}

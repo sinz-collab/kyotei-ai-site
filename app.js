@@ -654,6 +654,9 @@ function renderTop() {
   $("dateTitle").textContent = `${manifest.date || ""} のレース`;
   $("venueGrid").innerHTML = (manifest.venues || []).map((v) => {
     const eventLabel = `<b>${esc(v.eventDayLabel || "開催日目不明")}</b>`;
+    const specialEventLabel = v.eventLabel
+      ? `<strong class="venue-event-label">${esc(v.eventLabel)}</strong>`
+      : "";
     if (v.open && (v.predictionStatus === "unavailable" || v.prediction_status === "unavailable")) return `<button class="venue" onclick="openVenue('${v.slug}')">
       <div class="venue-status off">予想準備中</div>
       <h2>${v.name}</h2>
@@ -666,7 +669,7 @@ function renderTop() {
       <p>本日データなし</p>
     </div>`;
     return `<button class="venue" onclick="openVenue('${v.slug}')">
-      <div class="venue-status on"><span>開催</span>${eventLabel}</div>
+      <div class="venue-status on">${specialEventLabel}<span>開催</span>${eventLabel}</div>
       <h2>${v.name}</h2>
       <p>${v.entryCount || 0}R分<br>1R締切 ${v.firstDeadline || "-"}</p>
       <strong>予想を見る</strong>
