@@ -654,8 +654,12 @@ function renderTop() {
   $("dateTitle").textContent = `${manifest.date || ""} のレース`;
   $("venueGrid").innerHTML = (manifest.venues || []).map((v) => {
     const eventLabel = `<b>${esc(v.eventDayLabel || "開催日目不明")}</b>`;
-    const specialEventLabel = v.eventLabel
-      ? `<strong class="venue-event-label">${esc(v.eventLabel)}</strong>`
+    const rawSpecialEventLabel = String(v.eventLabel || "");
+    const gradeMatch = rawSpecialEventLabel.match(/^(SG|G[123])(?=$|｜)/);
+    const specialEventLabel = rawSpecialEventLabel
+      ? gradeMatch
+        ? `<strong class="venue-event-label"><span class="venue-event-grade ${gradeMatch[1] === "SG" ? "sg" : "g"}">${esc(gradeMatch[1])}</span>${esc(rawSpecialEventLabel.slice(gradeMatch[1].length))}</strong>`
+        : `<strong class="venue-event-label">${esc(rawSpecialEventLabel)}</strong>`
       : "";
     if (v.open && (v.predictionStatus === "unavailable" || v.prediction_status === "unavailable")) return `<button class="venue" onclick="openVenue('${v.slug}')">
       <div class="venue-status off">予想準備中</div>
