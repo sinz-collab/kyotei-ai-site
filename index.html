@@ -6,7 +6,7 @@
   <title>SINZ EDGE</title>
   <script>
     (function () {
-      var build = "20260819-motor-recent10-1";
+      var build = "20260917-scores-1";
       var url = new URL(location.href);
       if (url.searchParams.get("v") !== build) {
         url.searchParams.set("v", build);
@@ -14,7 +14,7 @@
       }
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=20260908-event-labels-1">
+  <link rel="stylesheet" href="styles.css?v=20260917-scores-1">
   <link rel="stylesheet" href="racer-labels.css?v=20260730-racer-labels-1">
   <link rel="stylesheet" href="motor-recent.css?v=20260819-motor-recent10-1">
 </head>
@@ -28,6 +28,7 @@
       <nav class="tabs">
         <button class="active" data-view="top">トップ</button>
         <button data-view="race">レース</button>
+        <button data-view="scores">成績</button>
       </nav>
     </header>
 
@@ -38,6 +39,11 @@
           <span>場を選択するとJSONから予想データを表示します</span>
         </div>
         <div class="venue-grid" id="venueGrid"></div>
+      </section>
+
+      <section id="scoresView" hidden>
+        <button class="back" onclick="renderScores()">成績を更新</button>
+        <div id="scoresContent" aria-live="polite"></div>
       </section>
 
       <section id="raceView" hidden>
@@ -65,7 +71,8 @@
   </main>
 
   <script src="config.js?v=main-data"></script>
-  <script src="app.js?v=20260908-event-labels-1"></script>
+  <script src="scores.js?v=20260917-scores-1"></script>
+  <script src="app.js?v=20260917-scores-1"></script>
   <script src="motor-recent.js?v=20260819-motor-recent10-1"></script>
   <script src="racer-labels.js?v=20260730-racer-labels-1"></script>
 </body>

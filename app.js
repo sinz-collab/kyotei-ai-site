@@ -743,6 +743,13 @@ async function refreshCurrentVenue() {
 }
 
 function showView(view) {
+  $("scoresView").hidden = view !== "scores";
+  if (view === "scores") {
+    if (liveRefreshTimer) clearInterval(liveRefreshTimer);
+    liveRefreshTimer = null;
+    clearRoute();
+    renderScores();
+  }
   $("topView").hidden = view !== "top";
   $("raceView").hidden = view !== "race";
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
