@@ -1676,7 +1676,28 @@ function renderPrediction() {
   if (!currentPredictionAvailable) {
     return `<div class="card"><h2>予想準備中</h2><div class="note">当日用予想データ未生成<br>架空の確率、SAB、買い目は表示しません。</div></div>`;
   }
-  const p = pred(), r = p.readability || {}, s = p.predictionStage || {};
+  let p = pred();
+  if (currentVenueSlug === "omura") {
+    const raceData = race();
+    const final = scoresFinal({ predictionFinal: raceData.predictionFinal }, null);
+    const pre = raceData.predictionPre?.probabilities;
+    if (final && pre && final.probabilityReviewStatus !== "reviewed") {
+      const probabilityReview = {};
+      for (const n of [1,2,3,4,5,6]) {
+        probabilityReview[n] = {};
+        for (const key of ["win", "second", "third"]) {
+          const suffix = key[0].toUpperCase() + key.slice(1);
+          probabilityReview[n][key] = final[key]?.[n];
+          probabilityReview[n][`morning${suffix}`] = pre[key]?.[n];
+          probabilityReview[n][`delta${suffix}`] = final[key]?.[n] - pre[key]?.[n];
+        }
+      }
+      p = { ...p, ...final, probabilityReviewStatus: "reviewed", probabilityReview };
+    } else if (final) {
+      p = { ...p, ...final };
+    }
+  }
+  const r = p.readability || {}, s = p.predictionStage || {};
   const tickets = p[ticketMode] || [];
   const showDeltas = p.probabilityReviewStatus === "reviewed";
   const flow = p.probabilityFlow || {};
