@@ -1696,6 +1696,14 @@ function renderPrediction() {
     } else if (final) {
       p = { ...p, ...final };
     }
+    if (final) {
+      for (const mode of ["ai", "aiUpset"]) {
+        p[mode] = (p[mode] || []).map((ticket) => ({
+          ...ticket,
+          prob: ticket.probability ?? ticket.prob,
+        }));
+      }
+    }
   }
   const r = p.readability || {}, s = p.predictionStage || {};
   const tickets = p[ticketMode] || [];
