@@ -526,7 +526,7 @@ async function loadLiveRace() {
   }
   // Venue-specific final predictions must come from their server-side engines.
   // Keep this legacy browser review available to other venues only.
-  if (currentPredictionAvailable && !["tokoname", "toda", "wakamatsu", "shimonoseki", "fukuoka"].includes(currentVenueSlug)) {
+  if (currentPredictionAvailable && !["tokoname", "toda", "wakamatsu", "shimonoseki", "fukuoka", "karatsu"].includes(currentVenueSlug)) {
     applyLivePredictionReview(prediction, { direct, exhibition, original_exhibition: original, odds });
   }
   if (validLiveDocument(result, "result")) {
@@ -547,8 +547,13 @@ function hasCompletedFinalPrediction(raceData) {
   const finalPrediction = raceData?.predictionFinal;
   return Boolean(
     finalPrediction
-    && finalPrediction.phase === "final"
-    && finalPrediction.finalPredictionStatus === "complete"
+    && (
+      finalPrediction.status === "complete"
+      || (
+        finalPrediction.phase === "final"
+        && finalPrediction.finalPredictionStatus === "complete"
+      )
+    )
   );
 }
 
@@ -760,8 +765,10 @@ function race() {
 function pred() {
   const raceData = race();
   const legacy = currentPayload?.preds?.[String(currentRaceNo)];
+  const useFinalPrediction = ["wakamatsu", "karatsu"].includes(currentVenueSlug)
+    && hasCompletedFinalPrediction(raceData);
 
-  if (legacy) {
+  if (legacy && !useFinalPrediction) {
     const oddsMap = raceData?.odds || legacy.odds || {};
 
     const normalizeLegacyTickets = (rows, defaultRole) =>
@@ -830,9 +837,7 @@ function pred() {
     };
   }
 
-  const source =
-  currentVenueSlug === "wakamatsu" &&
-  hasCompletedFinalPrediction(raceData)
+  const source = useFinalPrediction
     ? raceData.predictionFinal
     : raceData?.prediction;
 
@@ -843,6 +848,25 @@ function pred() {
   }
 
   const oddsMap = raceData?.odds || source.odds || {};
+  const prePrediction = raceData?.predictionPre;
+  const preProbability = (position) => prePrediction?.probabilities?.[position] || prePrediction?.[position] || {};
+  const finalReview = currentVenueSlug === "karatsu" && useFinalPrediction && prePrediction
+    ? Object.fromEntries([1,2,3,4,5,6].map((laneNo) => {
+      const key = String(laneNo);
+      const morningWin = num(preProbability("win")?.[key], 0);
+      const morningSecond = num(preProbability("second")?.[key], 0);
+      const morningThird = num(preProbability("third")?.[key], 0);
+      const win = num(source.win?.[key], 0);
+      const second = num(source.second?.[key], 0);
+      const third = num(source.third?.[key], 0);
+      return [key, {
+        morningWin, morningSecond, morningThird, win, second, third,
+        deltaWin: Math.round((win - morningWin) * 10) / 10,
+        deltaSecond: Math.round((second - morningSecond) * 10) / 10,
+        deltaThird: Math.round((third - morningThird) * 10) / 10,
+      }];
+    }))
+    : null;
 
   const ticketRows = (rows, role) =>
     (Array.isArray(rows) ? rows : []).map((item) => {
@@ -867,11 +891,11 @@ function pred() {
     third: source.probabilities?.third || source.third || {},
     top3: source.probabilities?.top3 || source.top3 || {},
     sab: source.sab?.grade || source.sab || "-",
-    ai: [
+    ai: source.ai || [
       ...ticketRows(source.tickets?.main, "本線"),
       ...ticketRows(source.tickets?.deviation, "ずらし")
     ],
-    aiUpset: ticketRows(
+    aiUpset: source.aiUpset || ticketRows(
       source.tickets?.upset || source.tickets?.insurance,
       "荒れ"
     ),
@@ -879,6 +903,15 @@ function pred() {
     readability: source.readability || {},
     attack: source.attack || {},
     logs: source.logs || [],
+    probabilityReview: source.probabilityReview || finalReview || undefined,
+    probabilityReviewStatus: source.probabilityReviewStatus || (finalReview ? "reviewed" : undefined),
+    probabilityFlow: source.probabilityFlow || (finalReview ? {
+      required: true,
+      baseApplied: true,
+      realtimeApplied: true,
+      reviewed: true,
+      adjustedRequired: true,
+    } : undefined),
     predictionStage: source.predictionStage || {
       label: "仮予想",
       statusText: "前データでのエンジン予想。直前・展示取得後に本予想へ更新",
@@ -1366,7 +1399,7 @@ function rowMap(obj) {
 }
 
 function realtimeCourse(row, fallback) {
-  return num(row?.start_course || row?.startCourse || row?.course || (row?.entry ? row?.lane : ""), fallback);
+  return num(row?.start_course || row?.startCourse || (currentVenueSlug === "karatsu" ? row?.exhibition_course : "") || row?.course || (row?.entry ? row?.lane : ""), fallback);
 }
 
 function valueRankClass(map, laneNo, key, lowerBetter = true) {
@@ -1451,6 +1484,8 @@ function renderSlit(realtime) {
     realtime.slit ||
     realtime.start ||
     realtime.st ||
+    (currentVenueSlug === "karatsu" ? realtime.exhibition?.slit_source : null) ||
+    (currentVenueSlug === "karatsu" ? realtime.exhibition?.entries : null) ||
     []
   );
 
@@ -1474,6 +1509,8 @@ function renderSlit(realtime) {
         last[n]?.st_raw,
         last[n]?.st,
         last[n]?.ST,
+        last[n]?.start_raw,
+        last[n]?.start_time,
         ""
       )
     ).trim();
@@ -1591,25 +1628,27 @@ function renderSlit(realtime) {
 function renderRealtime() {
   const p = pred();
   const rt = race().live || p.realtime || {};
-  const last = rowMap(rt.last || rt.lastMinute || rt.before || rt.direct);
-  const original = rowMap(rt.original || rt.originalExhibition || rt.sum || rt.display);
+  const embeddedExhibition = currentVenueSlug === "karatsu" ? rt.exhibition?.entries : null;
+  const last = rowMap(rt.last || rt.lastMinute || rt.before || rt.direct || embeddedExhibition);
+  const embeddedOriginal = currentVenueSlug === "karatsu" && Array.isArray(rt.original?.entries) ? rt.original.entries : null;
+  const original = rowMap(embeddedOriginal || rt.original || rt.originalExhibition || rt.sum || rt.display);
   const weather = rt.weather || {};
   const windDirection = weather.windDirection || weather.windDir || weather.wind_dir || weather.wind_direction;
   const windDirectionDisplay = formatWindDirection(windDirection);
   const windSpeed = weather.wind || weather.windSpeed || weather.wind_speed;
   const waveHeight = weather.wave || weather.waveHeight || weather.wave_height;
   const hasLast = Object.keys(last).length > 0;
-  const hasOriginal = rt.originalExhibitionAvailable === true
+  const hasOriginal = (rt.originalExhibitionAvailable === true || embeddedOriginal?.length === 6)
     && [1, 2, 3, 4, 5, 6].every((laneNo) => {
       const row = original[String(laneNo)] || original[laneNo] || {};
-      return [row.lap, row.turn, row.line || row.straight]
+      return [row.lap ?? row.lap_time, row.turn ?? row.turn_time, row.line || row.straight || row.straight_time]
         .every((value) => positiveNumber(value) !== null);
     });
   return `<div class="card"><h2>直前情報</h2>
       <div class="refresh-row"><button class="refresh-btn" onclick="refreshCurrentVenue()">最新データを再読み込み</button></div>
       <div class="note">天候 ${safe(weather.weather)} / 風向 ${windDirectionDisplay} / 風速 ${safe(windSpeed)}m / 波 ${safe(waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
       ${hasLast ? `<table><tr><th>枠</th><th>展示</th><th>ST</th><th>チルト</th><th>部品</th></tr>
-        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(firstValue(last[n]?.time, last[n]?.displayTime), valueRankClass(last, n, firstValue(last[n]?.time, "") !== "" ? "time" : "displayTime"))}</td><td>${safe(firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST))}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
+        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(exhibitionTimeFromRow(last[n]), valueRankClass(last, n, last[n]?.exhibition_time !== undefined ? "exhibition_time" : "time"))}</td><td>${safe(firstValue(last[n]?.st_raw, last[n]?.st, last[n]?.ST, last[n]?.start_raw, last[n]?.start_time))}</td><td>${safe(last[n]?.tilt)}</td><td>${safe(last[n]?.part || last[n]?.parts || last[n]?.propeller)}</td></tr>`).join("")}
       </table>` : `<div class="note">直前情報はまだ未取得です。</div>`}
       ${renderSlit(rt)}
     </div>
@@ -1624,7 +1663,7 @@ function renderRealtime() {
     </div>
     <div class="card"><h2>オリジナル展示</h2>
       ${hasOriginal ? `<div class="table-scroll"><table><tr><th>枠</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
-        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(original[n]?.lap, valueRankClass(original, n, "lap"))}</td><td>${timeBadge(original[n]?.turn, valueRankClass(original, n, "turn"))}</td><td>${timeBadge(original[n]?.line || original[n]?.straight, valueRankClass(original, n, original[n]?.line ? "line" : "straight"))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, "exhibition_time"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(firstValue(original[n]?.sum_diff, original[n]?.diff))}</td></tr>`).join("")}
+        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(firstValue(original[n]?.lap, original[n]?.lap_time), valueRankClass(original, n, original[n]?.lap !== undefined ? "lap" : "lap_time"))}</td><td>${timeBadge(firstValue(original[n]?.turn, original[n]?.turn_time), valueRankClass(original, n, original[n]?.turn !== undefined ? "turn" : "turn_time"))}</td><td>${timeBadge(firstValue(original[n]?.line, original[n]?.straight, original[n]?.straight_time), valueRankClass(original, n, original[n]?.line !== undefined ? "line" : (original[n]?.straight !== undefined ? "straight" : "straight_time")))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, original[n]?.exhibition_time !== undefined ? "exhibition_time" : "sum_exhibition"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(firstValue(original[n]?.sum_diff, original[n]?.sum_difference, original[n]?.diff))}</td></tr>`).join("")}
       </table></div>` : `<div class="note">オリジナル展示はまだ未取得です。</div>`}
     </div>`;
 }
