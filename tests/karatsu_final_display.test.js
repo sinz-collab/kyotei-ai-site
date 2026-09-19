@@ -4,6 +4,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const appSource = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
+const scoresSource = fs.readFileSync(path.join(__dirname, "..", "scores.js"), "utf8");
 const element = () => ({
   addEventListener() {},
   classList: { add() {}, remove() {}, toggle() {} },
@@ -36,6 +37,7 @@ const context = {
 };
 context.window.window = context.window;
 vm.createContext(context);
+vm.runInContext(scoresSource, context);
 vm.runInContext(`${appSource}
 globalThis.setDisplayState = (venue, payload, raceNo) => {
   currentVenueSlug = venue;
@@ -122,7 +124,7 @@ context.setDisplayState("karatsu", payload, 6);
 assert.match(context.renderPredictionForTest(), /現在は前データでの仮予想です/);
 assert.match(context.renderPredictionForTest(), /修正前 -/);
 
-context.setDisplayState("omura", payload, 1);
+context.setDisplayState("heiwajima", payload, 1);
 const otherVenuePrediction = context.predForTest();
 assert.equal(otherVenuePrediction.status, undefined);
 assert.equal(otherVenuePrediction.probabilityReviewStatus, undefined);

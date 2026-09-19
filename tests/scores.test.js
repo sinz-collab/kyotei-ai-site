@@ -1,0 +1,36 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const source = fs.readFileSync(path.join(__dirname, '..', 'scores.js'), 'utf8');
+const context = { Intl, Date };
+vm.createContext(context);
+vm.runInContext(source, context);
+const final = { phase: 'final', tickets: { main: [{ combination: '1-2-3' }], deviation: ['2-1-3'], upset: ['3-2-1'] } };
+const result = { status: 'complete', order: ['1', '2', '3'], payout3t: '1,240円', hitAi: false };
+const hit = context.scoresRow(1, { predictionFinal: final }, null, result);
+assert.equal(hit.hit, true);
+assert.equal(hit.payout, 1240);
+assert.equal(context.scoresCombo('123'), '1-2-3');
+assert.equal(context.scoresCombo('1-2-3-4'), '');
+const miss = context.scoresRow(2, { predictionFinal: final }, null, { ...result, order: '6-5-4', hitAi: true });
+assert.equal(miss.hit, false, 'Stored hit flags must not override ticket matching');
+for (const order of ['2-1-3', '3-2-1']) assert.equal(context.scoresRow(3, { predictionFinal: final }, null, { ...result, order }).hit, true);
+const waiting = context.scoresRow(4, {}, null, { ...result, status: 'pending' });
+assert.equal(waiting.status, '結果待ち');
+for (const status of ['cancelled', 'not_established', '中止', '不成立']) {
+  const cancelled = context.scoresRow(5, {}, null, { ...result, status });
+  assert.equal(cancelled.status, '中止');
+  assert.equal(cancelled.confirmed, false);
+}
+assert.equal(context.scoresRow(6, {}, { ai: ['1-2-3'], predictionStage: { label: '仮予想' } }, result).hit, false);
+assert.equal(context.scoresRow(7, {}, { ai: ['1-2-3'], predictionStage: { label: '本予想' } }, result).hit, true);
+assert.equal(context.scoresRow(8, { prediction_history: { final: [{ prediction: final }] } }, { ai: ['6-5-4'] }, result).hit, true);
+assert.equal(context.scoresRow(9, {}, null, { ...result, order: '1-1-2' }).confirmed, false);
+const total = context.scoresTotal([hit, miss, waiting, context.scoresRow(5, {}, null, { status: 'cancelled' })]);
+assert.equal(total.hits, 1);
+assert.equal(total.confirmed, 2);
+assert.equal(total.payout, 1240);
+assert.match(context.scoresSummary(total), /50.0%/);
+assert.match(context.scoresSummary(context.scoresTotal([])), /0.0%/);
+console.log('scores judgement, final-only tickets, cancellation, payout and totals passed');
