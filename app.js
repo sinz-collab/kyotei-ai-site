@@ -850,11 +850,27 @@ function pred() {
 
   if (!source) return {};
 
+  const ticketOdds = (item, combo) => {
+    if (item?.odds !== undefined && item.odds !== null && item.odds !== "" && item.odds !== "-") {
+      return item.odds;
+    }
+    const compactCombo = combo.replace(/-/g, "");
+    return raceData?.odds?.[combo] ??
+      raceData?.odds?.[compactCombo] ??
+      source.odds?.[combo] ??
+      source.odds?.[compactCombo] ??
+      "-";
+  };
+  const fillTicketOdds = (rows) => (Array.isArray(rows) ? rows : []).map((item) => {
+    if (!item || typeof item !== "object") return item;
+    const combo = String(item.combo || item.combination || item.ticket || "").trim();
+    return { ...item, odds: ticketOdds(item, combo) };
+  });
   if (raceData._uiPrediction) {
+    raceData._uiPrediction.ai = fillTicketOdds(raceData._uiPrediction.ai);
+    raceData._uiPrediction.aiUpset = fillTicketOdds(raceData._uiPrediction.aiUpset);
     return raceData._uiPrediction;
   }
-
-  const oddsMap = raceData?.odds || source.odds || {};
   const prePrediction = raceData?.predictionPre;
   const preProbability = (position) => prePrediction?.probabilities?.[position] || prePrediction?.[position] || {};
   const finalReview = currentVenueSlug === "karatsu" && useFinalPrediction && prePrediction
@@ -878,17 +894,11 @@ function pred() {
   const ticketRows = (rows, role) =>
     (Array.isArray(rows) ? rows : []).map((item) => {
       const combo = item.combination || item.combo || "";
-      const compactCombo = combo.replace(/-/g, "");
-
       return {
         combo,
         role: item.category || role,
         prob: item.score_pct ?? item.prob ?? 0,
-        odds:
-          item.odds ??
-          oddsMap[combo] ??
-          oddsMap[compactCombo] ??
-          "-"
+        odds: ticketOdds(item, combo)
       };
     });
   const normalizedPrediction = {
@@ -898,11 +908,11 @@ function pred() {
     third: source.probabilities?.third || source.third || {},
     top3: source.probabilities?.top3 || source.top3 || {},
     sab: source.sab?.grade || source.sab || "-",
-    ai: source.ai || [
+    ai: source.ai ? fillTicketOdds(source.ai) : [
       ...ticketRows(source.tickets?.main, "本線"),
       ...ticketRows(source.tickets?.deviation, "ずらし")
     ],
-    aiUpset: source.aiUpset || ticketRows(
+    aiUpset: source.aiUpset ? fillTicketOdds(source.aiUpset) : ticketRows(
       source.tickets?.upset || source.tickets?.insurance,
       "荒れ"
     ),
