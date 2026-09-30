@@ -116,9 +116,16 @@ function raceClosed(r) {
   return Date.now() > d.getTime();
 }
 
-function fBadge(b) {
-  const f = String(b.f || "");
-  return /^F[1-9]/.test(f) ? `<span class="f-badge">${f}</span>` : "";
+function fLabel(value) {
+  const raw = String(value ?? "").trim().toUpperCase();
+  const count = Number(raw.replace(/^F/, ""));
+  if (!Number.isInteger(count) || count <= 0) return "";
+  return count === 1 ? "F" : `F${count}`;
+}
+
+function fBadge(b, emptyText = "") {
+  const label = fLabel(b?.f);
+  return label ? `<span class="f-badge">${label}</span>` : emptyText;
 }
 
 function boatColor(n) {
@@ -1204,7 +1211,7 @@ function renderEntry() {
   return `<div class="card"><h2>${r.race}R 締切 ${safe(r.deadline)} ${renderRaceInfoBadges(r)}</h2>
   ${(r.racers || []).map((b) => `<div class="boat">${lane(b.lane)}<div>
     <div class="name">${safe(b.name)}${b.female ? " 💗" : ""}<span class="${gradeClass(b.class)}">${safe(b.class, "")}</span>${fBadge(b)}</div>
-    <div class="sub">${safe(b.age)}歳 / ${safe(b.weight)}kg　${safe(b.branch)}支部 / ${safe(b.home)}出身 / ${safe(b.f, "")}</div>
+    <div class="sub">${safe(b.age)}歳 / ${safe(b.weight)}kg　${safe(b.branch)}支部 / ${safe(b.home)}出身</div>
     <div class="stats">
       <div class="stat"><span>全国</span><b>${safe(b.nat_win)}</b></div>
       <div class="stat"><span>当地</span><b>${safe(b.local_win)}</b></div>
@@ -1383,6 +1390,10 @@ function renderCompare() {
   });
   return `<div class="card"><h2>${r.race}R 選手比較</h2>
     <div class="note">各項目を簡易スコア化。列ごとに1位は薄い赤、2位は薄い黄色で表示します。</div>
+    <div class="compare-f-wrap" aria-label="F累積比較">
+      <div class="compare-f-label">F累積</div>
+      ${(r.racers || []).map((b) => `<div class="compare-f-boat"><span>${lane(b.lane)}</span>${fBadge(b, "-")}</div>`).join("")}
+    </div>
     <div class="compare-wrap"><table class="compare-table">
       <tr><th>名前</th><th>格</th><th>決まり手</th><th>モーター</th><th>当地</th><th>当地ST</th><th>コース適性</th><th>節間成績</th></tr>
       ${rows.map((row) => `<tr><td>${lane(row.lane)} <b>${safe(row.name)}</b></td>${compareCell(rows,row,"grade")}${compareCell(rows,row,"kimarite")}${compareCell(rows,row,"motor")}${compareCell(rows,row,"local")}${compareCell(rows,row,"localSt")}${compareCell(rows,row,"course")}${compareCell(rows,row,"season")}</tr>`).join("")}

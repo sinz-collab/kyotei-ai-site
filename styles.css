@@ -75,7 +75,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 .attack{padding:10px;border-radius:14px;background:#f8fafc;border:1px solid var(--line);font-weight:900}
 .tide-type{display:inline-flex;margin:4px 0 8px;padding:8px 16px;border-radius:999px;background:#e7f5ff;color:#1765bd;font-size:22px;font-weight:950}
 .tide-svg{width:100%;height:auto;margin-top:8px;border-radius:14px;background:#f8fbff}
-.f-badge{display:inline-block;margin-left:5px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:950}
+.f-badge{display:inline-flex;align-items:center;justify-content:center;margin-left:5px;min-width:20px;background:#dc2626;color:#fff;border-radius:5px;padding:1px 5px;font-size:11px;font-weight:950;line-height:1.25;vertical-align:middle;white-space:nowrap}
 .season{margin-top:8px;padding:8px 10px;border-radius:12px;background:#fffaf0;border:1px solid #fdecc8;font-size:12px;color:#92400e;font-weight:900}
 .season-board{display:grid;gap:6px;margin-top:7px}
 .season-day-row{display:grid;grid-template-columns:54px 1fr 1fr;gap:5px;align-items:stretch}
@@ -88,6 +88,8 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 .coursebox{margin-top:8px;padding:9px 10px;border-radius:12px;background:#f8fafc;border:1px solid var(--line);font-size:12px;line-height:1.5}
 .coursebox b{font-size:14px}.coursebox .good{color:#0f766e}.coursebox .bad{color:#dc2626}.coursebox .normal{color:#475569}
 .compare-wrap{overflow-x:auto;margin-top:8px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.compare-f-wrap{display:grid;grid-template-columns:minmax(50px,1.35fr) repeat(6,minmax(38px,1fr));align-items:stretch;margin-top:8px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;font-size:11px;font-weight:900}
+.compare-f-label,.compare-f-boat{display:flex;align-items:center;justify-content:center;gap:3px;min-width:0;padding:5px 2px;border-right:1px solid #edf2f7}.compare-f-label{background:#f8fafc;color:#667085}.compare-f-boat:last-child{border-right:0}.compare-f-boat .lane{width:20px;height:20px;border-radius:6px;font-size:10px}.compare-f-boat .f-badge{margin-left:0}
 .compare-table{min-width:980px;border-collapse:separate;border-spacing:0}
 .compare-table th,.compare-table td{padding:8px 6px;border-bottom:1px solid #edf2f7;border-right:1px solid #edf2f7;vertical-align:middle}
 .compare-table th:first-child,.compare-table td:first-child{position:sticky;left:0;background:#fff;z-index:2;text-align:left;min-width:112px}
