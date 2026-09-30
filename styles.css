@@ -88,10 +88,9 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 .coursebox{margin-top:8px;padding:9px 10px;border-radius:12px;background:#f8fafc;border:1px solid var(--line);font-size:12px;line-height:1.5}
 .coursebox b{font-size:14px}.coursebox .good{color:#0f766e}.coursebox .bad{color:#dc2626}.coursebox .normal{color:#475569}
 .compare-wrap{overflow-x:auto;margin-top:8px;border:1px solid var(--line);border-radius:14px;background:#fff}
-.compare-f-wrap{display:grid;grid-template-columns:minmax(50px,1.35fr) repeat(6,minmax(38px,1fr));align-items:stretch;margin-top:8px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;font-size:11px;font-weight:900}
-.compare-f-label,.compare-f-boat{display:flex;align-items:center;justify-content:center;gap:3px;min-width:0;padding:5px 2px;border-right:1px solid #edf2f7}.compare-f-label{background:#f8fafc;color:#667085}.compare-f-boat:last-child{border-right:0}.compare-f-boat .lane{width:20px;height:20px;border-radius:6px;font-size:10px}.compare-f-boat .f-badge{margin-left:0}
 .compare-table{min-width:980px;border-collapse:separate;border-spacing:0}
 .compare-table th,.compare-table td{padding:8px 6px;border-bottom:1px solid #edf2f7;border-right:1px solid #edf2f7;vertical-align:middle}
+.compare-f-cell .f-badge{margin-left:0}
 .compare-table th:first-child,.compare-table td:first-child{position:sticky;left:0;background:#fff;z-index:2;text-align:left;min-width:112px}
 .compare-table th:first-child{background:#f8fafc;z-index:3}
 .compare-cell{border-radius:10px;padding:6px 4px;font-weight:950;line-height:1.25}

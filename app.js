@@ -1379,6 +1379,7 @@ function renderCompare() {
     return {
       lane: b.lane,
       name: b.name,
+      f: b.f,
       grade: { score: gradeScore(b), main: `${compareMark(gradeScore(b))} ${safe(b.class)}`, sub: `全国 ${safe(b.nat_win)}` },
       kimarite: { score: ki.score, main: ki.main, sub: ki.sub },
       motor: { score: motorScore(b), main: `${compareMark(motorScore(b))} No.${safe(b.motor_no)}`, sub: `2連 ${safe(b.motor_2)} / 3連 ${safe(b.motor_3)}` },
@@ -1390,13 +1391,9 @@ function renderCompare() {
   });
   return `<div class="card"><h2>${r.race}R 選手比較</h2>
     <div class="note">各項目を簡易スコア化。列ごとに1位は薄い赤、2位は薄い黄色で表示します。</div>
-    <div class="compare-f-wrap" aria-label="F累積比較">
-      <div class="compare-f-label">F累積</div>
-      ${(r.racers || []).map((b) => `<div class="compare-f-boat"><span>${lane(b.lane)}</span>${fBadge(b, "-")}</div>`).join("")}
-    </div>
     <div class="compare-wrap"><table class="compare-table">
-      <tr><th>名前</th><th>格</th><th>決まり手</th><th>モーター</th><th>当地</th><th>当地ST</th><th>コース適性</th><th>節間成績</th></tr>
-      ${rows.map((row) => `<tr><td>${lane(row.lane)} <b>${safe(row.name)}</b></td>${compareCell(rows,row,"grade")}${compareCell(rows,row,"kimarite")}${compareCell(rows,row,"motor")}${compareCell(rows,row,"local")}${compareCell(rows,row,"localSt")}${compareCell(rows,row,"course")}${compareCell(rows,row,"season")}</tr>`).join("")}
+      <tr><th>名前</th><th>格</th><th>F累積</th><th>決まり手</th><th>モーター</th><th>当地</th><th>当地ST</th><th>コース適性</th><th>節間成績</th></tr>
+      ${rows.map((row) => `<tr><td>${lane(row.lane)} <b>${safe(row.name)}</b></td>${compareCell(rows,row,"grade")}<td class="compare-f-cell">${fBadge(row, "-")}</td>${compareCell(rows,row,"kimarite")}${compareCell(rows,row,"motor")}${compareCell(rows,row,"local")}${compareCell(rows,row,"localSt")}${compareCell(rows,row,"course")}${compareCell(rows,row,"season")}</tr>`).join("")}
     </table></div>
   </div>`;
 }

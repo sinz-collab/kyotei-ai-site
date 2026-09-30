@@ -33,11 +33,12 @@ assert.match(badge({ f: "1" }), /class="f-badge">F<\/span>/);
 assert.match(badge({ f: "2" }), /class="f-badge">F2<\/span>/);
 
 assert.match(source, /function renderEntry\(\)[\s\S]*?\$\{fBadge\(b\)\}/);
-assert.match(source, /class="compare-f-wrap"[\s\S]*?F累積[\s\S]*?\$\{fBadge\(b, "-"\)\}/);
+assert.match(source, /<th>格<\/th><th>F累積<\/th><th>決まり手<\/th>/);
+assert.match(source, /compareCell\(rows,row,"grade"\)[^\n]*<td class="compare-f-cell">\$\{fBadge\(row, "-"\)\}<\/td>\$\{compareCell\(rows,row,"kimarite"\)\}/);
+assert.doesNotMatch(source, /class="compare-f-wrap"/);
 assert.match(styles, /\.f-badge\{[^}]*background:#dc2626[^}]*color:#fff[^}]*white-space:nowrap/);
-assert.match(styles, /\.compare-f-wrap\{[^}]*grid-template-columns:[^;}]*repeat\(6,minmax\(38px,1fr\)\)[^}]*overflow:hidden/);
 assert.match(styles, /\.compare-wrap\{[^}]*overflow-x:auto/);
-assert.match(index, /styles\.css\?v=20261001-f-display-1/);
-assert.match(index, /app\.js\?v=20261001-f-display-1/);
+assert.match(index, /styles\.css\?v=20261001-f-column-1/);
+assert.match(index, /app\.js\?v=20261001-f-column-1/);
 
 console.log("F display tests passed");
