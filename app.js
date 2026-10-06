@@ -924,6 +924,8 @@ function pred() {
       "荒れ"
     ),
     upsetIndex: source.upsetIndex ?? 0,
+    lane1FlyProbability: source.lane1FlyProbability,
+    lane1FlyLevel: source.lane1FlyLevel,
     readability: source.readability || {},
     attack: source.attack || {},
     logs: source.logs || [],
@@ -1763,6 +1765,8 @@ function renderPrediction() {
     }
   }
   const r = p.readability || {}, s = p.predictionStage || {};
+  const lane1FlyLevel = safe(p.lane1FlyLevel, "通常");
+  const lane1FlyClass = ({ "注意": "caution", "警戒": "warning", "危険": "danger" })[lane1FlyLevel] || "normal";
   const tickets = p[ticketMode] || [];
   const showDeltas = p.probabilityReviewStatus === "reviewed";
   const flow = p.probabilityFlow || {};
@@ -1819,7 +1823,9 @@ function renderPrediction() {
     <h2>${currentPayload.venue || ""}ロジック予想</h2>
     <div class="probgrid">
       <div class="probcard"><span>SAB</span><b>${safe(p.sab)}</b></div>
-      <div class="probcard"><span>荒れ指数</span><b>${pctInt(p.upsetIndex)}</b></div>
+      ${currentVenueSlug === "biwako"
+        ? `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率</span><b>${pctInt(p.lane1FlyProbability)}</b></div>`
+        : `<div class="probcard"><span>荒れ指数</span><b>${pctInt(p.upsetIndex)}</b></div>`}
       <div class="probcard"><span>攻め役</span><b>${safe(p.attack?.attackLane)}号艇</b></div>
     </div>
     <div class="note">軸候補：${r.axisLane ? r.axisLane + "号艇" : "-"} / ${safe(r.comment, "")}</div>

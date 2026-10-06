@@ -61,6 +61,7 @@ button:disabled{opacity:.62;cursor:wait}
 .stat,.probcard{background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center}
 .stat.rank1{background:#fff0ea;border-color:#ffc9b8}.stat.rank2{background:#fff8c7;border-color:#f7e58a}
 .stat span,.probcard span{display:block;font-size:10px;color:var(--muted)}.stat b,.probcard b{font-size:17px}
+.probcard.lane1-fly span{white-space:nowrap}.probcard.lane1-fly.caution{background:#fff8db;border-color:#f2cf66}.probcard.lane1-fly.warning{background:#fff0e5;border-color:#f4a261}.probcard.lane1-fly.danger{background:#fff0f0;border-color:#ef8b8b}.probcard.lane1-fly.caution b{color:#9a6700}.probcard.lane1-fly.warning b{color:#c05621}.probcard.lane1-fly.danger b{color:#c92a2a}
 table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px solid #edf2f7;padding:7px;text-align:center}th{background:#f8fafc;color:#667085}
 .table-scroll{max-width:100%;overflow-x:auto;contain:inline-size;-webkit-overflow-scrolling:touch}
 .table-scroll table{min-width:100%;table-layout:fixed}
