@@ -1768,6 +1768,13 @@ function renderPrediction() {
   const lane1FlyLevel = safe(p.lane1FlyLevel, "通常");
   const lane1FlyClass = ({ "注意": "caution", "警戒": "warning", "危険": "danger" })[lane1FlyLevel] || "normal";
   const tickets = p[ticketMode] || [];
+  const isBiwakoTickets = currentVenueSlug === "biwako";
+  const aiModeLabel = isBiwakoTickets
+    ? `AI予想<span>${(p.ai || []).length}点</span>`
+    : "AI予想";
+  const upsetModeLabel = isBiwakoTickets
+    ? `1号艇飛び予想<span>${(p.aiUpset || []).length}点</span>`
+    : "AI荒れ予想";
   const showDeltas = p.probabilityReviewStatus === "reviewed";
   const flow = p.probabilityFlow || {};
   const isFinalStage = currentVenueSlug === "tokoname"
@@ -1834,7 +1841,7 @@ function renderPrediction() {
     <table class="prob-table"><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th>${hasTop3Probabilities ? "<th>3着内</th>" : ""}</tr>${probRows}</table>
   </div>
   <div class="card"><h2>買い目</h2>
-    <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">AI予想</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">AI荒れ予想</button></div>
+    <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">${upsetModeLabel}</button></div>
     ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">買い目はまだありません。</div>`}
   </div>`;
 }
@@ -1905,7 +1912,7 @@ function renderResult() {
     ${r.order ? `<div class="result-line"><div class="result-label">3連単 着順</div><div class="finish-row">${order.map((n, i) => `${i ? '<span class="finish-arrow" aria-hidden="true"></span>' : ""}${finishBoat(n)}`).join("")}</div></div>
       <div class="result-pay"><div class="paybox"><span>払戻</span><b>${safe(r.payout3t)}</b></div><div class="paybox"><span>人気</span><b>${safe(r.popularity3t)}</b></div></div>` :
       `<div class="result-line"><div class="result-label">結果待ち</div><div class="note">締切9分後から結果取得を試します。</div></div>`}
-    <div class="result-sub"><div class="paybox"><span>決まり手</span><b>${safe(r.kimarite)}</b>${kimariteNote}</div><div class="paybox"><span>AI予想</span><b>${hitAi ? "的中" : "-"}</b></div><div class="paybox"><span>AI荒れ</span><b>${hitUpset ? "的中" : "-"}</b></div></div>
+    <div class="result-sub"><div class="paybox"><span>決まり手</span><b>${safe(r.kimarite)}</b>${kimariteNote}</div><div class="paybox"><span>AI予想</span><b>${hitAi ? "的中" : "-"}</b></div><div class="paybox"><span>${currentVenueSlug === "biwako" ? "1号艇飛び予想" : "AI荒れ"}</span><b>${hitUpset ? "的中" : "-"}</b></div></div>
     ${r.fetchedAt ? `<div class="note">結果取得: ${esc(r.fetchedAt)}</div>` : ""}
   </div>`;
 }
