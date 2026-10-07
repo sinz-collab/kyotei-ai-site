@@ -926,6 +926,7 @@ function pred() {
     upsetIndex: source.upsetIndex ?? 0,
     lane1FlyProbability: source.lane1FlyProbability,
     lane1FlyLevel: source.lane1FlyLevel,
+    flyPrediction: source.flyPrediction,
     readability: source.readability || {},
     attack: source.attack || {},
     logs: source.logs || [],
@@ -1767,6 +1768,12 @@ function renderPrediction() {
   const r = p.readability || {}, s = p.predictionStage || {};
   const lane1FlyLevel = safe(p.lane1FlyLevel, "通常");
   const lane1FlyClass = ({ "注意": "caution", "警戒": "warning", "危険": "danger" })[lane1FlyLevel] || "normal";
+  const todaFly = currentPayload?.venueId === "toda" && p.flyPrediction?.status === "final"
+    ? p.flyPrediction
+    : null;
+  const todaFlyTickets = todaFly?.isFly && Array.isArray(todaFly.tickets)
+    ? todaFly.tickets
+    : [];
   const tickets = p[ticketMode] || [];
   const isBiwakoTickets = currentVenueSlug === "biwako";
   const aiModeLabel = isBiwakoTickets
@@ -1825,14 +1832,23 @@ function renderPrediction() {
   const reviewNote = showDeltas
     ? `<div class="note">上段は展示・スリット・直前情報を反映して再精査した修正後、下段は修正前の前データです。</div>`
     : `<div class="note">現在は前データでの仮予想です。展示・スリット・直前情報が入り、再精査済みになると上段に修正後、下段に修正前を表示します。</div>`;
+  const flyProbabilityCard = currentVenueSlug === "biwako"
+    ? `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率</span><b>${pctInt(p.lane1FlyProbability)}</b></div>`
+    : todaFly
+      ? `<div class="probcard lane1-fly ${todaFly.isFly ? "danger" : "normal"}"><span>1号艇飛び確率</span><b>${pct1(todaFly.probability)}</b>${todaFly.isFly ? '<em>飛び判定</em>' : ""}</div>`
+      : `<div class="probcard"><span>荒れ指数</span><b>${pctInt(p.upsetIndex)}</b></div>`;
+  const todaFlySection = todaFlyTickets.length
+    ? `<div class="card toda-fly-tickets"><div class="fly-ticket-heading"><h2>飛び専用10点</h2><span>通常AI買い目とは別枠</span></div>
+      <div class="note">1号艇を1着に置かない、本予想確定後の専用買い目です。</div>
+      ${todaFlyTickets.map((ticket) => `<div class="fly-ticket"><div><div class="combo">${safe(ticket.combo)}</div><span class="role">${safe(ticket.role)}</span></div><b>${safe(ticket.head)}号艇HEAD</b></div>`).join("")}
+    </div>`
+    : "";
   return `<div class="card">
     <div class="stage ${stageColor}"><div><b>${stageLabel}</b><br>${stageStatus}</div><span>${stageLabel}</span></div>
     <h2>${currentPayload.venue || ""}ロジック予想</h2>
     <div class="probgrid">
       <div class="probcard"><span>SAB</span><b>${safe(p.sab)}</b></div>
-      ${currentVenueSlug === "biwako"
-        ? `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率</span><b>${pctInt(p.lane1FlyProbability)}</b></div>`
-        : `<div class="probcard"><span>荒れ指数</span><b>${pctInt(p.upsetIndex)}</b></div>`}
+      ${flyProbabilityCard}
       <div class="probcard"><span>攻め役</span><b>${safe(p.attack?.attackLane)}号艇</b></div>
     </div>
     <div class="note">軸候補：${r.axisLane ? r.axisLane + "号艇" : "-"} / ${safe(r.comment, "")}</div>
@@ -1843,7 +1859,8 @@ function renderPrediction() {
   <div class="card"><h2>買い目</h2>
     <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">${upsetModeLabel}</button></div>
     ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">買い目はまだありません。</div>`}
-  </div>`;
+  </div>
+  ${todaFlySection}`;
 }
 
 function renderLogs() {
