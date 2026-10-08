@@ -40,6 +40,10 @@ const pct1 = (v) => {
   const n = num(v, NaN);
   return Number.isFinite(n) ? `${n.toFixed(1)}%` : "-";
 };
+const lane1FlyProbabilityText = (v) => {
+  if (v === undefined || v === null || v === "") return "—";
+  return typeof v === "number" && Number.isFinite(v) ? `${v}%` : esc(v);
+};
 
 const WIND_DIRECTIONS = [
   ["↑", "北"],
@@ -1767,10 +1771,13 @@ function renderPrediction() {
   }
   const r = p.readability || {}, s = p.predictionStage || {};
   const lane1FlyLevel = safe(p.lane1FlyLevel, "通常");
-  const lane1FlyClass = ({ "注意": "caution", "警戒": "warning", "危険": "danger" })[lane1FlyLevel] || "normal";
   const todaFly = currentPayload?.venueId === "toda" && p.flyPrediction?.status === "final"
     ? p.flyPrediction
     : null;
+  const lane1FlyProbability = firstValue(p.lane1FlyProbability, p.flyPrediction?.probability);
+  const lane1FlyClass = p.flyPrediction?.isFly
+    ? "danger"
+    : (({ "注意": "caution", "警戒": "warning", "危険": "danger" })[lane1FlyLevel] || "normal");
   const todaFlyTickets = todaFly?.isFly && Array.isArray(todaFly.tickets)
     ? todaFly.tickets
     : [];
@@ -1832,11 +1839,7 @@ function renderPrediction() {
   const reviewNote = showDeltas
     ? `<div class="note">上段は展示・スリット・直前情報を反映して再精査した修正後、下段は修正前の前データです。</div>`
     : `<div class="note">現在は前データでの仮予想です。展示・スリット・直前情報が入り、再精査済みになると上段に修正後、下段に修正前を表示します。</div>`;
-  const flyProbabilityCard = currentVenueSlug === "biwako"
-    ? `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率</span><b>${pctInt(p.lane1FlyProbability)}</b></div>`
-    : todaFly
-      ? `<div class="probcard lane1-fly ${todaFly.isFly ? "danger" : "normal"}"><span>1号艇飛び確率</span><b>${pct1(todaFly.probability)}</b>${todaFly.isFly ? '<em>飛び判定</em>' : ""}</div>`
-      : `<div class="probcard"><span>荒れ指数</span><b>${pctInt(p.upsetIndex)}</b></div>`;
+  const flyProbabilityCard = `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率</span><b>${lane1FlyProbabilityText(lane1FlyProbability)}</b>${todaFly?.isFly ? '<em>飛び判定</em>' : ""}</div>`;
   const todaFlySection = todaFlyTickets.length
     ? `<div class="card toda-fly-tickets"><div class="fly-ticket-heading"><h2>飛び専用10点</h2><span>通常AI買い目とは別枠</span></div>
       <div class="note">1号艇を1着に置かない、本予想確定後の専用買い目です。</div>
