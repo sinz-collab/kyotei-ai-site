@@ -1781,7 +1781,7 @@ function renderPrediction() {
   const todaFlyTickets = todaFly?.isFly && Array.isArray(todaFly.tickets)
     ? todaFly.tickets
     : [];
-  const tickets = p[ticketMode] || [];
+  const tickets = predictionTicketsForDisplay(p, ticketMode, todaFlyTickets, currentVenueSlug);
   const isBiwakoTickets = currentVenueSlug === "biwako";
   const aiModeLabel = isBiwakoTickets
     ? `AI予想<span>${(p.ai || []).length}点</span>`
@@ -1864,6 +1864,13 @@ function renderPrediction() {
     ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">買い目はまだありません。</div>`}
   </div>
   ${todaFlySection}`;
+}
+
+function predictionTicketsForDisplay(prediction, mode, flyTickets, venueSlug) {
+  const tickets = prediction[mode] || [];
+  if (venueSlug !== "toda" || mode !== "ai" || !flyTickets.length) return tickets;
+  const flyCombos = new Set(flyTickets.map((ticket) => String(ticket.combo || "").trim()).filter(Boolean));
+  return tickets.filter((ticket) => !flyCombos.has(String(ticket.combo || "").trim()));
 }
 
 function renderLogs() {

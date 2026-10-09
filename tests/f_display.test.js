@@ -39,6 +39,6 @@ assert.doesNotMatch(source, /class="compare-f-wrap"/);
 assert.match(styles, /\.f-badge\{[^}]*background:#dc2626[^}]*color:#fff[^}]*white-space:nowrap/);
 assert.match(styles, /\.compare-wrap\{[^}]*overflow-x:auto/);
 assert.match(index, /styles\.css\?v=20261007-toda-fly-2/);
-assert.match(index, /app\.js\?v=20261007-toda-fly-2/);
+assert.match(index, /app\.js\?v=20261009-toda-fly-dedupe-1/);
 
 console.log("F display tests passed");
