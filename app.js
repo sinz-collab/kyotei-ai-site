@@ -1845,9 +1845,16 @@ function renderPrediction() {
     ? `<div class="card toda-fly-tickets"><div class="fly-ticket-heading"><h2>飛び専用AI買い目</h2><span>${todaFlyTickets.length}点 / 通常AI買い目とは別枠</span></div>
       <div class="note">1号艇を1着に置かない、利用可能な予想データから生成した専用買い目です。</div>
       ${todaFlyShortage ? `<div class="note">有効候補不足：${todaFlyShortage}点（${safe(todaFly.ticketShortageReason, "理由不明")}）</div>` : ""}
-      ${todaFlyTickets.map((ticket) => `<div class="fly-ticket"><div><div class="combo">${safe(ticket.combo)}</div><span class="role">${safe(ticket.role)}</span></div><b>${safe(ticket.head)}号艇HEAD</b></div>`).join("")}
+      ${todaFlyTickets.map((ticket) => `<div class="ticket fly-ticket"><div><div class="combo">${safe(ticket.combo)}</div><span class="role">${safe(ticket.role)}</span></div><div><span class="note">HEAD</span><br><b>${safe(ticket.head)}号艇</b></div><div><span class="note">オッズ</span><br><b>${safe(currentTrifectaOdds(ticket.combo))}</b></div></div>`).join("")}
     </div>`
     : "";
+  const ticketSection = `<div class="card toda-normal-tickets"><h2>${todaFly ? (ticketMode === "ai" ? "通常AI買い目" : "AI荒れ買い目") : "買い目"}</h2>
+    <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">${upsetModeLabel}</button></div>
+    ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">買い目はまだありません。</div>`}
+  </div>`;
+  const ticketLayout = todaFlySection
+    ? `<div class="toda-ticket-scroll"><div class="toda-ticket-grid">${ticketSection}${todaFlySection}</div></div>`
+    : ticketSection;
   return `<div class="card">
     <div class="stage ${stageColor}"><div><b>${stageLabel}</b><br>${stageStatus}</div><span>${stageLabel}</span></div>
     <h2>${currentPayload.venue || ""}ロジック予想</h2>
@@ -1861,11 +1868,7 @@ function renderPrediction() {
   <div class="card"><h2>全艇確率</h2>${flowNote}${reviewNote}
     <table class="prob-table"><tr><th>枠</th><th>1着</th><th>2着</th><th>3着</th>${hasTop3Probabilities ? "<th>3着内</th>" : ""}</tr>${probRows}</table>
   </div>
-  <div class="card"><h2>買い目</h2>
-    <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">${upsetModeLabel}</button></div>
-    ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">買い目はまだありません。</div>`}
-  </div>
-  ${todaFlySection}`;
+  ${ticketLayout}`;
 }
 
 function renderLogs() {
