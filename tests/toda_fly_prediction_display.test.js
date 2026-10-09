@@ -24,7 +24,41 @@ assert.match(app, /safe\(currentTrifectaOdds\(ticket\.combo\)\)/);
 assert.match(app, /class="toda-ticket-scroll"/);
 assert.match(app, /class="toda-ticket-grid"/);
 assert.match(app, /ticketMode === "ai" \? "通常AI買い目" : "AI荒れ買い目"/);
+assert.match(app, /function selectTicketMode\(nextMode\)/);
+assert.match(app, /currentPayload\?\.venueId === "toda"/);
+assert.match(app, /nextMode === "aiUpset"/);
+assert.match(app, /upsetTickets\.length === 0/);
+assert.match(app, /flyTickets\.length > 0/);
+assert.match(app, /window\.matchMedia\("\(max-width: 390px\)"\)\.matches/);
+assert.match(app, /scroller\.scrollLeft = scroller\.scrollWidth/);
+assert.match(app, /onclick="selectTicketMode\('aiUpset'\)"/);
+assert.match(app, /AI荒れ買い目はありません。/);
 assert.doesNotMatch(app, /function predictionTicketsForDisplay/);
+
+const modeStart = app.indexOf("function selectTicketMode");
+const modeEnd = app.indexOf("function switchPane", modeStart);
+assert.ok(modeStart >= 0 && modeEnd > modeStart);
+const scroller = { scrollLeft: 0, scrollWidth: 732 };
+const modeContext = {
+  ticketMode: "ai",
+  currentPayload: { venueId: "toda" },
+  pred: () => ({ aiUpset: [], flyPrediction: { tickets: [{ combo: "2-1-3" }] } }),
+  renderPane: () => {},
+  window: { matchMedia: () => ({ matches: true }) },
+  document: { querySelector: () => scroller },
+};
+vm.createContext(modeContext);
+vm.runInContext(
+  `${app.slice(modeStart, modeEnd)}; globalThis.selectMode = selectTicketMode;`,
+  modeContext,
+);
+modeContext.selectMode("aiUpset");
+assert.equal(scroller.scrollLeft, 732);
+
+scroller.scrollLeft = 0;
+modeContext.pred = () => ({ aiUpset: [{ combo: "3-2-1" }], flyPrediction: { tickets: [{ combo: "2-1-3" }] } });
+modeContext.selectMode("aiUpset");
+assert.equal(scroller.scrollLeft, 0);
 
 const oddsStart = app.indexOf("function currentTrifectaOdds");
 const oddsEnd = app.indexOf("function formatMoney", oddsStart);

@@ -1022,6 +1022,25 @@ function renderPane() {
   $("pane").innerHTML = paneMarkup();
 }
 
+function selectTicketMode(nextMode) {
+  ticketMode = nextMode;
+  renderPane();
+
+  const prediction = pred();
+  const upsetTickets = Array.isArray(prediction.aiUpset) ? prediction.aiUpset : [];
+  const flyTickets = Array.isArray(prediction.flyPrediction?.tickets) ? prediction.flyPrediction.tickets : [];
+  if (
+    currentPayload?.venueId === "toda"
+    && nextMode === "aiUpset"
+    && upsetTickets.length === 0
+    && flyTickets.length > 0
+    && window.matchMedia("(max-width: 390px)").matches
+  ) {
+    const scroller = document.querySelector(".toda-ticket-scroll");
+    if (scroller) scroller.scrollLeft = scroller.scrollWidth;
+  }
+}
+
 function switchPane(nextPane) {
   if (!nextPane || nextPane === currentPane) return;
   if (completePaneTransition) completePaneTransition();
@@ -1849,8 +1868,8 @@ function renderPrediction() {
     </div>`
     : "";
   const ticketSection = `<div class="card toda-normal-tickets"><h2>${todaFly ? (ticketMode === "ai" ? "通常AI買い目" : "AI荒れ買い目") : "買い目"}</h2>
-    <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="ticketMode='ai';renderPane()">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="ticketMode='aiUpset';renderPane()">${upsetModeLabel}</button></div>
-    ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">買い目はまだありません。</div>`}
+    <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">${upsetModeLabel}</button></div>
+    ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">${ticketMode === "aiUpset" ? "AI荒れ買い目はありません。" : "買い目はまだありません。"}</div>`}
   </div>`;
   const ticketLayout = todaFlySection
     ? `<div class="toda-ticket-scroll"><div class="toda-ticket-grid">${ticketSection}${todaFlySection}</div></div>`
