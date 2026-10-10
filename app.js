@@ -847,6 +847,14 @@ function pred() {
 
     return {
       ...legacy,
+      lane1FlyProbability: firstValue(
+        raceData?.prediction?.lane1FlyProbability,
+        legacy.lane1FlyProbability
+      ),
+      lane1FlyLevel: firstValue(
+        raceData?.prediction?.lane1FlyLevel,
+        legacy.lane1FlyLevel
+      ),
       ai: [
         ...mainTickets,
         ...deviationTickets

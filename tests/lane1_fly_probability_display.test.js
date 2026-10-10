@@ -6,6 +6,7 @@ const app = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 
 assert.match(app, /firstValue\(p\.lane1FlyProbability, p\.flyPrediction\?\.probability\)/);
 assert.match(app, /<span>1号艇飛び確率<\/span><b>\$\{lane1FlyProbabilityText\(lane1FlyProbability\)\}<\/b>/);
+assert.match(app, /raceData\?\.prediction\?\.lane1FlyProbability/);
 assert.match(app, /if \(v === undefined \|\| v === null \|\| v === ""\) return "—"/);
 assert.doesNotMatch(app, /<span>荒れ指数<\/span>/);
 assert.doesNotMatch(app, /flyProbabilityCard = currentVenueSlug/);
