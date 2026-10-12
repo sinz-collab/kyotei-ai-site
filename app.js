@@ -1798,17 +1798,22 @@ function renderPrediction() {
   }
   const r = p.readability || {}, s = p.predictionStage || {};
   const lane1FlyLevel = safe(p.lane1FlyLevel, "通常");
-  const todaFly = currentPayload?.venueId === "toda" && ["pre", "final"].includes(p.flyPrediction?.status)
-    ? p.flyPrediction
-    : null;
+  const isTodaFly = currentPayload?.venueId === "toda" && ["pre", "final"].includes(p.flyPrediction?.status);
+  const isFukuokaFly = currentPayload?.venueId === "fukuoka" && ["morning", "live", "unavailable"].includes(p.flyPrediction?.status);
+  const dedicatedFly = isTodaFly || isFukuokaFly ? p.flyPrediction : null;
+  const todaFly = isTodaFly ? dedicatedFly : null;
   const lane1FlyProbability = firstValue(p.lane1FlyProbability, p.flyPrediction?.probability);
   const lane1FlyClass = p.flyPrediction?.isFly
     ? "danger"
     : (({ "注意": "caution", "警戒": "warning", "危険": "danger" })[lane1FlyLevel] || "normal");
-  const todaFlyTickets = Array.isArray(todaFly?.tickets)
-    ? todaFly.tickets
-    : [];
+  const todaFlyTickets = Array.isArray(todaFly?.tickets) ? todaFly.tickets : [];
+  const dedicatedFlyTickets = isFukuokaFly && Array.isArray(dedicatedFly?.tickets)
+    ? dedicatedFly.tickets
+    : todaFlyTickets;
   const tickets = p[ticketMode] || [];
+  const displayedTickets = isFukuokaFly
+    ? [...(p.ai || []), ...(p.aiUpset || [])]
+    : tickets;
   const isBiwakoTickets = currentVenueSlug === "biwako";
   const aiModeLabel = isBiwakoTickets
     ? `AI予想<span>${(p.ai || []).length}点</span>`
@@ -1867,17 +1872,20 @@ function renderPrediction() {
     ? `<div class="note">上段は展示・スリット・直前情報を反映して再精査した修正後、下段は修正前の前データです。</div>`
     : `<div class="note">現在は前データでの仮予想です。展示・スリット・直前情報が入り、再精査済みになると上段に修正後、下段に修正前を表示します。</div>`;
   const flyProbabilityCard = `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率</span><b>${lane1FlyProbabilityText(lane1FlyProbability)}</b>${todaFly ? `<em>${todaFly.isFly ? "飛び優勢" : "逃げ優勢"}</em>` : ""}</div>`;
-  const todaFlyShortage = num(todaFly?.ticketShortage, 0);
-  const todaFlySection = todaFlyTickets.length
-    ? `<div class="card toda-fly-tickets"><div class="fly-ticket-heading"><h2>飛び専用AI買い目</h2><span>${todaFlyTickets.length}点 / 通常AI買い目とは別枠</span></div>
+  const dedicatedFlyShortage = num(dedicatedFly?.ticketShortage, 0);
+  const dedicatedFlyTitle = isFukuokaFly ? "1号艇飛び専用AI買い目" : "飛び専用AI買い目";
+  const todaFlySection = dedicatedFlyTickets.length
+    ? `<div class="card toda-fly-tickets"><div class="fly-ticket-heading"><h2>${dedicatedFlyTitle}</h2><span>${dedicatedFlyTickets.length}点 / 通常AI買い目とは別枠</span></div>
       <div class="note">1号艇を1着に置かない、利用可能な予想データから生成した専用買い目です。</div>
-      ${todaFlyShortage ? `<div class="note">有効候補不足：${todaFlyShortage}点（${safe(todaFly.ticketShortageReason, "理由不明")}）</div>` : ""}
-      ${todaFlyTickets.map((ticket) => `<div class="ticket fly-ticket"><div><div class="combo">${safe(ticket.combo)}</div><span class="role">${safe(ticket.role)}</span></div><div><span class="note">HEAD</span><br><b>${safe(ticket.head)}号艇</b></div><div><span class="note">オッズ</span><br><b>${safe(currentTrifectaOdds(ticket.combo))}</b></div></div>`).join("")}
+      ${dedicatedFlyShortage ? `<div class="note">有効候補不足：${dedicatedFlyShortage}点（${safe(dedicatedFly.ticketShortageReason, "理由不明")}）</div>` : ""}
+      ${dedicatedFlyTickets.map((ticket) => `<div class="ticket fly-ticket"><div><div class="combo">${safe(ticket.combo)}</div><span class="role">${safe(ticket.role)}</span></div><div><span class="note">${isFukuokaFly ? "区分" : "HEAD"}</span><br><b>${isFukuokaFly ? safe(ticket.role) : `${safe(ticket.head)}号艇`}</b></div><div><span class="note">オッズ</span><br><b>${safe(currentTrifectaOdds(ticket.combo))}</b></div></div>`).join("")}
     </div>`
-    : "";
-  const ticketSection = `<div class="card toda-normal-tickets"><h2>${todaFly ? (ticketMode === "ai" ? "通常AI買い目" : "AI荒れ買い目") : "買い目"}</h2>
-    <div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">${upsetModeLabel}</button></div>
-    ${tickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">${ticketMode === "aiUpset" ? "AI荒れ買い目はありません。" : "買い目はまだありません。"}</div>`}
+    : (isFukuokaFly && dedicatedFly?.status === "unavailable"
+      ? `<div class="card toda-fly-tickets"><div class="fly-ticket-heading"><h2>${dedicatedFlyTitle}</h2><span>算出不可</span></div><div class="note">進入変更または入力不足のため、飛び専用買い目は表示できません。</div></div>`
+      : "");
+  const ticketSection = `<div class="card toda-normal-tickets"><h2>${isFukuokaFly ? "AI予想（通常10点）" : (todaFly ? (ticketMode === "ai" ? "通常AI買い目" : "AI荒れ買い目") : "買い目")}</h2>
+    ${isFukuokaFly ? "" : `<div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">${upsetModeLabel}</button></div>`}
+    ${displayedTickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">${ticketMode === "aiUpset" ? "AI荒れ買い目はありません。" : "買い目はまだありません。"}</div>`}
   </div>`;
   const ticketLayout = todaFlySection
     ? `<div class="toda-ticket-scroll"><div class="toda-ticket-grid">${ticketSection}${todaFlySection}</div></div>`
