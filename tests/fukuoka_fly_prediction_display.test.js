@@ -4,6 +4,12 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const app = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
+
+assert.match(
+  app,
+  /currentVenueSlug === "fukuoka" \? 60 \* 1000 : 4 \* 60 \* 1000/,
+  "Fukuoka live display must refresh every minute without changing other venues",
+);
 const css = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");
 
 assert.match(app, /currentPayload\?\.venueId === "fukuoka"/);

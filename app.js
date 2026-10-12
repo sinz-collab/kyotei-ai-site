@@ -612,6 +612,7 @@ async function refreshWakamatsuVenuePayload() {
 function startLiveRefresh() {
   if (liveRefreshTimer) clearInterval(liveRefreshTimer);
   let refreshInFlight = false;
+  const refreshInterval = currentVenueSlug === "fukuoka" ? 60 * 1000 : 4 * 60 * 1000;
   liveRefreshTimer = setInterval(async () => {
     if (document.hidden || !currentVenueSlug || !currentPayload || refreshInFlight) return;
     refreshInFlight = true;
@@ -625,7 +626,7 @@ function startLiveRefresh() {
     } finally {
       refreshInFlight = false;
     }
-  }, 4 * 60 * 1000);
+  }, refreshInterval);
 }
 
 function parseRoute() {
