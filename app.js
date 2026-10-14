@@ -11,6 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
+const SITE_BUILD = "20261014-wakamatsu-live-refresh-v4";
 
 let manifest = null;
 let currentPayload = null;
@@ -40,6 +41,10 @@ const pct1 = (v) => {
   const n = num(v, NaN);
   return Number.isFinite(n) ? `${n.toFixed(1)}%` : "-";
 };
+function ticketProbabilityText(ticket, isFlyTicket) {
+  const probability = firstValue(ticket?.probability, isFlyTicket ? undefined : ticket?.prob);
+  return probability === undefined ? "-" : pct1(probability);
+}
 const lane1FlyProbabilityText = (v) => {
   if (v === undefined || v === null || v === "") return "—";
   return typeof v === "number" && Number.isFinite(v) ? `${v}%` : esc(v);
@@ -609,6 +614,22 @@ async function refreshWakamatsuVenuePayload() {
   return true;
 }
 
+async function refreshSiteBuildIfStale() {
+  try {
+    const response = await fetch(`${location.pathname}?build_check=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) return false;
+    const html = await response.text();
+    const deployedBuild = html.match(/var build = "([^"]+)"/)?.[1];
+    if (!deployedBuild || deployedBuild === SITE_BUILD) return false;
+    const nextUrl = new URL(location.href);
+    nextUrl.searchParams.set("v", deployedBuild);
+    location.replace(nextUrl.toString());
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 function startLiveRefresh() {
   if (liveRefreshTimer) clearInterval(liveRefreshTimer);
   let refreshInFlight = false;
@@ -617,6 +638,7 @@ function startLiveRefresh() {
     if (document.hidden || !currentVenueSlug || !currentPayload || refreshInFlight) return;
     refreshInFlight = true;
     try {
+      if (currentVenueSlug === "wakamatsu" && await refreshSiteBuildIfStale()) return;
       await refreshWakamatsuVenuePayload();
       await loadLiveRace();
       renderPane();
@@ -1889,12 +1911,11 @@ function renderPrediction() {
     : (isFukuokaFly && dedicatedFly?.status === "unavailable"
       ? `<div class="card toda-fly-tickets"><div class="fly-ticket-heading"><h2>${dedicatedFlyTitle}</h2><span>算出不可</span></div><div class="note">進入変更または入力不足のため、飛び専用買い目は表示できません。</div></div>`
       : "");
-  const ticketSection = `<div class="card toda-normal-tickets"><h2>${isFukuokaFly ? "AI予想（通常10点）" : (todaFly ? (ticketMode === "ai" ? "通常AI買い目" : "AI荒れ買い目") : "買い目")}</h2>
+  const ticketSection = `<div class="card toda-normal-tickets${isWakamatsuFly ? " wakamatsu-tickets" : ""}"><h2>${isFukuokaFly ? "AI予想（通常10点）" : (todaFly ? (ticketMode === "ai" ? "通常AI買い目" : "AI荒れ買い目") : "買い目")}</h2>
     ${isFukuokaFly ? "" : `<div class="mode ${isWakamatsuFly ? "wakamatsu-fly-mode" : ""}"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">${upsetModeLabel}</button></div>`}
     ${displayedTickets.map((t) => {
       const isFlyTicket = isWakamatsuFly && ticketMode === "aiUpset";
-      const probability = firstValue(t.probability, isFlyTicket ? undefined : t.prob);
-      const metric = probability === undefined ? "-" : pct1(probability);
+      const metric = ticketProbabilityText(t, isFlyTicket);
       return `<div class="ticket"><div><div class="combo">${safe(t.combo)}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">予想確率</span><br><b>${metric}</b></div><div><span class="note">LIVEオッズ</span><br><b>${safe(currentTrifectaOdds(t.combo))}</b></div></div>`;
     }).join("") || `<div class="note">${isWakamatsuFly && ticketMode === "aiUpset" ? "着順率が不足しているため、1号艇飛び買い目は算出できません。" : (ticketMode === "aiUpset" ? "AI荒れ買い目はありません。" : "買い目はまだありません。")}</div>`}
   </div>`;
@@ -2265,5 +2286,8 @@ $("pane").addEventListener("touchcancel", () => {
 document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => showView(b.dataset.view));
 document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => switchPane(b.dataset.pane));
 $("backTop").onclick = () => showView("top");
+document.addEventListener?.("visibilitychange", () => {
+  if (!document.hidden && currentVenueSlug === "wakamatsu") refreshSiteBuildIfStale();
+});
 
 init();
