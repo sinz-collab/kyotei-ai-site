@@ -13,7 +13,10 @@ assert.match(app, /Array\.isArray\(p\.flyPrediction\?\.tickets\) \? p\.flyPredic
 assert.match(app, /AI買い目<span>\$\{wakamatsuNormalTickets\.length\}点<\/span>/);
 assert.match(app, /1号艇飛び買い目<span>\$\{wakamatsuFlyTickets\.length\}点<\/span>/);
 assert.match(app, /ticketMode === "ai" \? wakamatsuNormalTickets : wakamatsuFlyTickets/);
-assert.match(app, /isFlyTicket \? "スコア" : "予想確率"/);
+assert.match(app, /const probability = firstValue\(t\.probability, isFlyTicket \? undefined : t\.prob\)/);
+assert.match(app, /probability === undefined \? "-" : pct1\(probability\)/);
+assert.match(app, /<span class="note">予想確率<\/span>/);
+assert.doesNotMatch(app, /isFlyTicket \? "スコア" : "予想確率"/);
 assert.match(app, /<span class="note">LIVEオッズ<\/span>/);
 assert.match(app, /safe\(currentTrifectaOdds\(t\.combo\)\)/);
 assert.match(app, /着順率が不足しているため、1号艇飛び買い目は算出できません。/);
@@ -38,4 +41,4 @@ assert.equal(oddsContext.lookup("2-1-3"), 12.3);
 assert.equal(oddsContext.lookup("2-1-6"), 45.6);
 assert.equal(oddsContext.lookup("6-5-4"), "-");
 
-console.log("Wakamatsu fly v1 tabs, score labels, and live odds display passed");
+console.log("Wakamatsu fly v1 tabs, normalized probability labels, and live odds display passed");

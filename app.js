@@ -1893,8 +1893,9 @@ function renderPrediction() {
     ${isFukuokaFly ? "" : `<div class="mode ${isWakamatsuFly ? "wakamatsu-fly-mode" : ""}"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">${upsetModeLabel}</button></div>`}
     ${displayedTickets.map((t) => {
       const isFlyTicket = isWakamatsuFly && ticketMode === "aiUpset";
-      const metric = isFlyTicket ? safe(t.score) : pct1(firstValue(t.probability, t.prob));
-      return `<div class="ticket"><div><div class="combo">${safe(t.combo)}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">${isFlyTicket ? "スコア" : "予想確率"}</span><br><b>${metric}</b></div><div><span class="note">LIVEオッズ</span><br><b>${safe(currentTrifectaOdds(t.combo))}</b></div></div>`;
+      const probability = firstValue(t.probability, isFlyTicket ? undefined : t.prob);
+      const metric = probability === undefined ? "-" : pct1(probability);
+      return `<div class="ticket"><div><div class="combo">${safe(t.combo)}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">予想確率</span><br><b>${metric}</b></div><div><span class="note">LIVEオッズ</span><br><b>${safe(currentTrifectaOdds(t.combo))}</b></div></div>`;
     }).join("") || `<div class="note">${isWakamatsuFly && ticketMode === "aiUpset" ? "着順率が不足しているため、1号艇飛び買い目は算出できません。" : (ticketMode === "aiUpset" ? "AI荒れ買い目はありません。" : "買い目はまだありません。")}</div>`}
   </div>`;
   const ticketLayout = todaFlySection
