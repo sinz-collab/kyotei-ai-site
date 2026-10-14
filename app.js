@@ -718,6 +718,7 @@ async function openVenue(slug, route = {}) {
   }
   currentPayload = payload;
   currentVenueSlug = slug;
+  ticketMode = "ai";
   currentPredictionAvailable = (
     v.predictionAvailable === true
     || v.prediction_available === true
@@ -1801,6 +1802,8 @@ function renderPrediction() {
   const lane1FlyLevel = safe(p.lane1FlyLevel, "通常");
   const isTodaFly = currentPayload?.venueId === "toda" && ["pre", "final"].includes(p.flyPrediction?.status);
   const isFukuokaFly = currentPayload?.venueId === "fukuoka" && ["morning", "live", "unavailable"].includes(p.flyPrediction?.status);
+  const isWakamatsuFly = currentPayload?.venueId === "wakamatsu"
+    && p.flyPrediction?.modelVersion === "wakamatsu_fly_tickets_v1";
   const dedicatedFly = isTodaFly || isFukuokaFly ? p.flyPrediction : null;
   const todaFly = isTodaFly ? dedicatedFly : null;
   const lane1FlyProbability = firstValue(p.lane1FlyProbability, p.flyPrediction?.probability);
@@ -1812,16 +1815,18 @@ function renderPrediction() {
     ? dedicatedFly.tickets
     : todaFlyTickets;
   const tickets = p[ticketMode] || [];
-  const displayedTickets = isFukuokaFly
-    ? [...(p.ai || []), ...(p.aiUpset || [])]
-    : tickets;
+  const wakamatsuNormalTickets = Array.isArray(p.tickets) ? p.tickets : [];
+  const wakamatsuFlyTickets = Array.isArray(p.flyPrediction?.tickets) ? p.flyPrediction.tickets : [];
+  const displayedTickets = isWakamatsuFly
+    ? (ticketMode === "ai" ? wakamatsuNormalTickets : wakamatsuFlyTickets)
+    : (isFukuokaFly ? [...(p.ai || []), ...(p.aiUpset || [])] : tickets);
   const isBiwakoTickets = currentVenueSlug === "biwako";
-  const aiModeLabel = isBiwakoTickets
-    ? `AI予想<span>${(p.ai || []).length}点</span>`
-    : "AI予想";
-  const upsetModeLabel = isBiwakoTickets
-    ? `1号艇飛び予想<span>${(p.aiUpset || []).length}点</span>`
-    : "AI荒れ予想";
+  const aiModeLabel = isWakamatsuFly
+    ? `AI買い目<span>${wakamatsuNormalTickets.length}点</span>`
+    : (isBiwakoTickets ? `AI予想<span>${(p.ai || []).length}点</span>` : "AI予想");
+  const upsetModeLabel = isWakamatsuFly
+    ? `1号艇飛び買い目<span>${wakamatsuFlyTickets.length}点</span>`
+    : (isBiwakoTickets ? `1号艇飛び予想<span>${(p.aiUpset || []).length}点</span>` : "AI荒れ予想");
   const showDeltas = p.probabilityReviewStatus === "reviewed";
   const flow = p.probabilityFlow || {};
   const isFinalStage = currentVenueSlug === "tokoname"
@@ -1885,8 +1890,12 @@ function renderPrediction() {
       ? `<div class="card toda-fly-tickets"><div class="fly-ticket-heading"><h2>${dedicatedFlyTitle}</h2><span>算出不可</span></div><div class="note">進入変更または入力不足のため、飛び専用買い目は表示できません。</div></div>`
       : "");
   const ticketSection = `<div class="card toda-normal-tickets"><h2>${isFukuokaFly ? "AI予想（通常10点）" : (todaFly ? (ticketMode === "ai" ? "通常AI買い目" : "AI荒れ買い目") : "買い目")}</h2>
-    ${isFukuokaFly ? "" : `<div class="mode"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">${upsetModeLabel}</button></div>`}
-    ${displayedTickets.map((t) => `<div class="ticket"><div><div class="combo">${t.combo}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">確率</span><br><b>${pctInt(t.prob)}</b></div><div><span class="note">オッズ</span><br><b>${safe(t.odds)}</b></div></div>`).join("") || `<div class="note">${ticketMode === "aiUpset" ? "AI荒れ買い目はありません。" : "買い目はまだありません。"}</div>`}
+    ${isFukuokaFly ? "" : `<div class="mode ${isWakamatsuFly ? "wakamatsu-fly-mode" : ""}"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">${upsetModeLabel}</button></div>`}
+    ${displayedTickets.map((t) => {
+      const isFlyTicket = isWakamatsuFly && ticketMode === "aiUpset";
+      const metric = isFlyTicket ? safe(t.score) : pct1(firstValue(t.probability, t.prob));
+      return `<div class="ticket"><div><div class="combo">${safe(t.combo)}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">${isFlyTicket ? "スコア" : "予想確率"}</span><br><b>${metric}</b></div><div><span class="note">LIVEオッズ</span><br><b>${safe(currentTrifectaOdds(t.combo))}</b></div></div>`;
+    }).join("") || `<div class="note">${isWakamatsuFly && ticketMode === "aiUpset" ? "着順率が不足しているため、1号艇飛び買い目は算出できません。" : (ticketMode === "aiUpset" ? "AI荒れ買い目はありません。" : "買い目はまだありません。")}</div>`}
   </div>`;
   const ticketLayout = todaFlySection
     ? `<div class="toda-ticket-scroll"><div class="toda-ticket-grid">${ticketSection}${todaFlySection}</div></div>`
