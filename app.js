@@ -1860,6 +1860,9 @@ function renderPrediction() {
       flow.reviewed ||
       showDeltas
     );
+  const lane1FlyStageLabel = currentPayload?.venueId === "wakamatsu"
+    ? (isFinalStage ? "LIVE" : "朝")
+    : "";
 
   const stageLabel = isFinalStage ? "本予想" : "仮予想";
   const stageStatus = isFinalStage
@@ -1899,7 +1902,7 @@ function renderPrediction() {
   const reviewNote = showDeltas
     ? `<div class="note">上段は展示・スリット・直前情報を反映して再精査した修正後、下段は修正前の前データです。</div>`
     : `<div class="note">現在は前データでの仮予想です。展示・スリット・直前情報が入り、再精査済みになると上段に修正後、下段に修正前を表示します。</div>`;
-  const flyProbabilityCard = `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率</span><b>${lane1FlyProbabilityText(lane1FlyProbability)}</b>${todaFly ? `<em>${todaFly.isFly ? "飛び優勢" : "逃げ優勢"}</em>` : ""}</div>`;
+  const flyProbabilityCard = `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率${lane1FlyStageLabel ? ` <small>${lane1FlyStageLabel}</small>` : ""}</span><b>${lane1FlyProbabilityText(lane1FlyProbability)}</b>${todaFly ? `<em>${todaFly.isFly ? "飛び優勢" : "逃げ優勢"}</em>` : ""}</div>`;
   const dedicatedFlyShortage = num(dedicatedFly?.ticketShortage, 0);
   const dedicatedFlyTitle = isFukuokaFly ? "1号艇飛び専用AI買い目" : "飛び専用AI買い目";
   const todaFlySection = dedicatedFlyTickets.length
