@@ -16,17 +16,20 @@ assert.match(app, /currentPayload\?\.venueId === "fukuoka"/);
 assert.match(app, /\["morning", "live", "unavailable"\]\.includes\(p\.flyPrediction\?\.status\)/);
 assert.match(app, /const isDedicatedFlyVenue = isTodaFly \|\| isFukuokaFly/);
 assert.match(app, /dedicatedFlyTicketSets\(p\)/);
-assert.match(app, /通常AI買い目（10点）/);
-assert.match(app, /1号艇飛び専用10点/);
-assert.match(app, /isFukuokaFly \? "区分" : "HEAD"/);
-assert.match(app, /safe\(currentTrifectaOdds\(ticket\.combo\)\)/);
+assert.match(app, /const usesFlyTicketTabs = isWakamatsuFly \|\| isDedicatedFlyVenue/);
+assert.match(app, /<h2>買い目<\/h2>/);
+assert.match(app, /AI買い目<span>/);
+assert.match(app, /1号艇飛び買い目<span>/);
+assert.match(app, /ticketMode === "ai" \? dedicatedTicketSets\.normal : dedicatedFlyTickets/);
+assert.match(app, /safe\(currentTrifectaOdds\(t\.combo\)\)/);
 assert.match(app, /dedicatedFly\?\.status === "unavailable"/);
 assert.match(app, /進入変更または入力不足/);
-assert.match(app, /算出不可/);
-
-assert.match(css, /\.toda-ticket-scroll\{[^}]*overflow-x:auto/);
-assert.match(css, /\.toda-ticket-grid\{[^}]*grid-template-columns:repeat\(2,minmax\(360px,1fr\)\)/);
-assert.match(css, /@media\(max-width:390px\)\{\.toda-ticket-grid\{grid-template-columns:repeat\(2,360px\)\}/);
+assert.doesNotMatch(app, /class="toda-ticket-scroll"/);
+assert.doesNotMatch(app, /class="toda-ticket-grid"/);
+assert.doesNotMatch(app, /通常AI買い目（10点）/);
+assert.doesNotMatch(app, /<h2>1号艇飛び専用10点/);
+assert.doesNotMatch(css, /\.toda-ticket-scroll/);
+assert.doesNotMatch(css, /\.toda-ticket-grid/);
 
 const oddsStart = app.indexOf("function currentTrifectaOdds");
 const oddsEnd = app.indexOf("function formatMoney", oddsStart);
@@ -44,4 +47,4 @@ assert.equal(oddsContext.lookup("3-1-4"), 12.3);
 assert.equal(oddsContext.lookup("3-1-5"), 45.6);
 assert.equal(oddsContext.lookup("2-1-4"), "-");
 
-console.log("Fukuoka fly ticket two-column and 390px scroll display passed");
+console.log("Fukuoka Wakamatsu-style ticket tabs and live odds display passed");
