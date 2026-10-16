@@ -13,18 +13,44 @@ function scoresToday() {
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
-function scoresFinal(raceData, legacy) {
+function scoresTime(value) {
+  const parsed = Date.parse(String(value || ''));
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function scoresItemTime(item) {
+  const source = item?.prediction || item || {};
+  return [item?.published_at, item?.publishedAt, item?.generated_at, item?.generatedAt,
+    item?.input_cutoff_at, source?.published_at, source?.publishedAt, source?.generated_at, source?.generatedAt]
+    .map(scoresTime).find(Number.isFinite);
+}
+
+function scoresResultTime(result) {
+  return [result?.confirmed_at, result?.confirmedAt, result?.fetched_at, result?.fetchedAt,
+    result?.updated_at, result?.updatedAt].map(scoresTime).find(Number.isFinite);
+}
+
+function scoresFinal(raceData, legacy, result) {
   const history = raceData?.prediction_history || legacy?.prediction_history || raceData?.prediction?.prediction_history;
-  const snapshot = history?.final?.at(-1);
+  const finalHistory = Array.isArray(history?.final) ? history.final : [];
+  const resultTime = scoresResultTime(result);
+  const eligibleHistory = Number.isFinite(resultTime)
+    ? finalHistory.filter((item) => {
+      const itemTime = scoresItemTime(item);
+      return !Number.isFinite(itemTime) || itemTime <= resultTime;
+    })
+    : finalHistory;
+  const snapshot = eligibleHistory.at(-1);
   if (snapshot) return snapshot.prediction || snapshot;
   const candidates = [raceData?.predictionFinal, legacy, raceData?.prediction];
-  return candidates.find((p) => p && !['error', 'fetch_error', 'parse_error', 'pending'].includes(p.status)
+  return candidates.find((p) => (!Number.isFinite(resultTime) || !Number.isFinite(scoresItemTime(p)) || scoresItemTime(p) <= resultTime)
+    && p && !['error', 'fetch_error', 'parse_error', 'pending'].includes(p.status)
     && (p.finalPredictionStatus === 'complete' || p.phase === 'final' || p.stage === 'final'
       || p.predictionStage === 'final' || p.predictionStage?.code === 'final'
       || p.predictionStage?.label === '本予想' || p.predictionStage?.badge === '本予想')) || null;
 }
 
-function scoresTickets(p) {
+function scoresNormalTickets(p) {
   if (!p) return [];
   const tickets = p.tickets;
   return [p.ai, p.balance, p.aiUpset, Array.isArray(tickets) ? tickets : null,
@@ -32,19 +58,26 @@ function scoresTickets(p) {
     .flatMap((rows) => Array.isArray(rows) ? rows : []);
 }
 
+function scoresTickets(p, venueSlug) {
+  return [scoresNormalTickets(p),
+    ['toda', 'fukuoka'].includes(venueSlug) && Array.isArray(p?.flyPrediction?.tickets) ? p.flyPrediction.tickets : []]
+    .flat();
+}
+
 function scoresCancelled(result) {
   return ['cancelled', 'canceled', 'aborted', 'void', 'no_race', 'not_established'].includes(result?.status)
     || /中止|不成立/.test(String(result?.status || '') + String(result?.message || ''));
 }
 
-function scoresRow(raceNo, raceData, legacy, result) {
+function scoresRow(raceNo, raceData, legacy, result, venueSlug) {
   if (scoresCancelled(result)) return { race: raceNo, status: '中止', icon: '−', confirmed: false, hit: false, order: '', payout: null };
   const order = scoresCombo(result?.order);
   const confirmed = Boolean(order) && ['ok', 'complete', 'confirmed'].includes(result?.status);
   const payoutText = String(result?.payout3t ?? '').replace(/[¥￥円,\s]/g, '');
   const payout = /^\d+$/.test(payoutText) ? Number(payoutText) : null;
-  const final = scoresFinal(raceData, legacy);
-  const hit = confirmed && scoresTickets(final).some((ticket) => scoresCombo(typeof ticket === 'string' ? ticket : ticket?.combo || ticket?.combination || ticket?.ticket || ticket?.bet) === order);
+  const dedicatedFlyVenue = ['toda', 'fukuoka'].includes(venueSlug);
+  const final = scoresFinal(raceData, legacy, dedicatedFlyVenue ? result : null);
+  const hit = confirmed && scoresTickets(final, venueSlug).some((ticket) => scoresCombo(typeof ticket === 'string' ? ticket : ticket?.combo || ticket?.combination || ticket?.ticket || ticket?.bet) === order);
   return { race: raceNo, order: confirmed ? order : '', confirmed, hit, payout: confirmed ? payout : null,
     status: confirmed ? (hit ? '的中' : '不的中') : '結果待ち', icon: confirmed ? (hit ? '✅' : '❌') : '⏳',
     note: confirmed && !final ? '公開済み最終買い目なし' : '' };
@@ -80,11 +113,15 @@ async function loadScoresVenue(venue, date) {
           const live = await fetchLiveJson(`${date}/${venue.slug}/${String(raceNo).padStart(2, '0')}/result.json`);
           if (live && live.date === date && live.venue === venue.slug && Number(live.race_no) === raceNo) {
             if (scoresCancelled(live)) result = { ...live.data, status: live.status, message: live.message };
-            else if (['ok', 'complete', 'confirmed'].includes(live.status) && live.data) result = { ...live.data, status: live.status };
+            else if (['ok', 'complete', 'confirmed'].includes(live.status) && live.data) result = {
+              ...live.data,
+              status: live.status,
+              ...(['toda', 'fukuoka'].includes(venue.slug) ? { fetchedAt: live.fetched_at || live.generated_at } : {}),
+            };
           }
         } catch (_) { failed = true; }
       }
-      return scoresRow(raceNo, raceData, legacy, result);
+      return scoresRow(raceNo, raceData, legacy, result, venue.slug);
     }));
     rows.push(...batch);
   }

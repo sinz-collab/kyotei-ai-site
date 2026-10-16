@@ -14,10 +14,10 @@ const css = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");
 
 assert.match(app, /currentPayload\?\.venueId === "fukuoka"/);
 assert.match(app, /\["morning", "live", "unavailable"\]\.includes\(p\.flyPrediction\?\.status\)/);
-assert.match(app, /const dedicatedFly = isTodaFly \|\| isFukuokaFly \? p\.flyPrediction : null/);
-assert.match(app, /\[\.\.\.\(p\.ai \|\| \[\]\), \.\.\.\(p\.aiUpset \|\| \[\]\)\]/);
-assert.match(app, /AI予想（通常10点）/);
-assert.match(app, /1号艇飛び専用AI買い目/);
+assert.match(app, /const isDedicatedFlyVenue = isTodaFly \|\| isFukuokaFly/);
+assert.match(app, /dedicatedFlyTicketSets\(p\)/);
+assert.match(app, /通常AI買い目（10点）/);
+assert.match(app, /1号艇飛び専用10点/);
 assert.match(app, /isFukuokaFly \? "区分" : "HEAD"/);
 assert.match(app, /safe\(currentTrifectaOdds\(ticket\.combo\)\)/);
 assert.match(app, /dedicatedFly\?\.status === "unavailable"/);
