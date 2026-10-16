@@ -5,6 +5,10 @@ const vm = require("node:vm");
 
 const app = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 const scores = fs.readFileSync(path.join(__dirname, "..", "scores.js"), "utf8");
+const css = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");
+
+assert.match(scores, /scores-race-status[\s\S]*scores-hit-slot[\s\S]*row\.order/, "hit label must be between status and result");
+assert.match(css, /\.scores-row\{[^}]*grid-template-columns:28px minmax\(0,1fr\) 64px 50px 68px/);
 
 const setsStart = app.indexOf("function dedicatedFlyTicketSets");
 const setsEnd = app.indexOf("const lane1FlyProbabilityText", setsStart);
@@ -56,11 +60,15 @@ const rateRow = scoreContext.scoresRow(5, { predictionFinal: withRate }, null, {
 assert.equal(rateRow.status, "結果待ち");
 assert.equal(rateRow.flyRate, 37.74);
 assert.match(scoreContext.scoresRaceMeta(rateRow, true), /飛び率 37\.7%/);
-assert.match(scoreContext.scoresRaceMeta(normalRow, true), /通常的中/);
-assert.match(scoreContext.scoresRaceMeta(flyRow, true), /飛び的中/);
-assert.match(scoreContext.scoresRaceMeta(bothRow, true), /両方的中/);
-assert.doesNotMatch(scoreContext.scoresRaceMeta(rows[3], true), /scores-hit-label/);
+assert.match(scoreContext.scoresHitLabel(normalRow), /通常的中/);
+assert.match(scoreContext.scoresHitLabel(flyRow), /飛び的中/);
+assert.match(scoreContext.scoresHitLabel(bothRow), /両方的中/);
+assert.equal(scoreContext.scoresHitLabel(rows[3]), "");
+assert.equal(scoreContext.scoresHitLabel(rateRow), "");
 assert.match(scoreContext.scoresRaceMeta(scoreContext.scoresRow(8, {}, null, { status: "pending" }, "fukuoka"), true), /飛び率 --/);
+
+const otherVenueHit = scoreContext.scoresRow(9, { predictionFinal: normalOnly }, null, result, "heiwajima");
+assert.match(scoreContext.scoresHitLabel(otherVenueHit), /通常的中/, "all venues must use the dedicated hit-label column");
 
 const history = {
   prediction_history: {

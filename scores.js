@@ -121,12 +121,16 @@ function scoresHitBreakdownHtml(rows) {
 function scoresRaceMeta(row, dedicatedFlyVenue) {
   if (!dedicatedFlyVenue) return row.note ? `<small>${esc(row.note)}</small>` : '';
   const rate = row.flyRate === null ? '--' : `${row.flyRate.toFixed(1)}%`;
+  return `<small class="scores-fly-rate">飛び率 ${rate}</small>${row.note ? `<small>${esc(row.note)}</small>` : ''}`;
+}
+
+function scoresHitLabel(row) {
   const labels = {
     normal: '<em class="scores-hit-label normal">通常的中</em>',
     fly: '<em class="scores-hit-label fly">飛び的中</em>',
     both: '<em class="scores-hit-label both">両方的中</em>',
   };
-  return `<small class="scores-fly-rate">飛び率 ${rate}</small>${labels[row.hitType] || ''}${row.note ? `<small>${esc(row.note)}</small>` : ''}`;
+  return labels[row.hitType] || '';
 }
 
 async function loadScoresVenue(venue, date) {
@@ -191,7 +195,8 @@ async function renderScores() {
         ${['toda', 'fukuoka'].includes(venue.slug) ? scoresHitBreakdownHtml(rows) : ''}
         ${failed ? '<p class="note">一部データを読み込めませんでした。再読み込みで更新してください。</p>' : ''}
         <div class="scores-races">${rows.map((row) => `<div class="scores-row"><b>${row.race}R</b>
-          <span>${row.icon} ${row.status}${scoresRaceMeta(row, ['toda', 'fukuoka'].includes(venue.slug))}</span>
+          <span class="scores-race-status">${row.icon} ${row.status}${scoresRaceMeta(row, ['toda', 'fukuoka'].includes(venue.slug))}</span>
+          <span class="scores-hit-slot">${scoresHitLabel(row)}</span>
           <b>${esc(row.order || '−')}</b><span>${row.payout !== null ? `¥${row.payout.toLocaleString('ja-JP')}` : '−'}</span></div>`).join('')}</div></article>`).join('')
         || '<div class="card note">本日の開催場はありません。</div>');
   } catch (_) {
