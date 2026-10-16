@@ -4,11 +4,13 @@
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
 }
 .scores-summary{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;color:var(--navy)}
+.scores-hit-breakdown{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:9px}.scores-hit-breakdown b{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:11px}.scores-hit-breakdown span{color:var(--navy);font-size:13px}
 .scores-venue h2{margin:0 0 8px;font-size:20px}
 .scores-races{margin-top:12px}
 .scores-row{display:grid;grid-template-columns:30px minmax(0,1fr) 55px 75px;gap:6px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:12px}
 .scores-row>span:last-child{text-align:right;font-variant-numeric:tabular-nums}
 .scores-row small{display:block;font-size:10px;color:var(--muted);overflow-wrap:anywhere}
+.scores-row .scores-fly-rate{margin-top:2px;font-weight:800}.scores-hit-label{display:inline-flex;margin-top:4px;padding:2px 7px;border-radius:999px;color:#fff;font-size:10px;font-style:normal;font-weight:950;line-height:1.35}.scores-hit-label.normal{background:#15803d}.scores-hit-label.fly{background:#2563eb}.scores-hit-label.both{background:#7e22ce}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink)}
 .app{max-width:520px;margin:0 auto;min-height:100svh;background:#f7f9fb}

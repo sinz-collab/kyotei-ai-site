@@ -34,25 +34,45 @@ const flyOnly = { ...normalOnly, aiUpset: [{ combo: "4-1-2" }], flyPrediction: {
 const both = { ...normalOnly, flyPrediction: { tickets: [{ combo: "3-1-2" }] } };
 const miss = { ...normalOnly, aiUpset: [{ combo: "4-1-2" }] };
 
-assert.equal(scoreContext.scoresRow(1, { predictionFinal: normalOnly }, null, result, "toda").hit, true);
-assert.equal(scoreContext.scoresRow(2, { predictionFinal: flyOnly }, null, result, "fukuoka").hit, true);
-assert.equal(scoreContext.scoresRow(3, { predictionFinal: both }, null, result, "toda").hit, true);
+const normalRow = scoreContext.scoresRow(1, { predictionFinal: normalOnly }, null, result, "toda");
+const flyRow = scoreContext.scoresRow(2, { predictionFinal: flyOnly }, null, result, "fukuoka");
+const bothRow = scoreContext.scoresRow(3, { predictionFinal: both }, null, result, "toda");
+assert.equal(normalRow.hit, true);
+assert.equal(normalRow.hitType, "normal");
+assert.equal(flyRow.hit, true);
+assert.equal(flyRow.hitType, "fly");
+assert.equal(bothRow.hit, true);
+assert.equal(bothRow.hitType, "both");
 assert.equal(scoreContext.scoresRow(4, { predictionFinal: miss }, null, result, "fukuoka").hit, false);
 assert.equal(scoreContext.scoresRow(5, { predictionFinal: flyOnly }, null, result, "biwako").hit, false, "other venues must not use dedicated fly tickets");
 
 const rows = [normalOnly, flyOnly, both, miss].map((prediction, index) =>
   scoreContext.scoresRow(index + 1, { predictionFinal: prediction }, null, result, index % 2 ? "fukuoka" : "toda"));
 assert.deepEqual({ ...scoreContext.scoresTotal(rows) }, { hits: 3, confirmed: 4, payout: 3600 });
+assert.deepEqual({ ...scoreContext.scoresHitBreakdown(rows) }, { normal: 1, fly: 1, both: 1 });
+
+const withRate = { ...normalOnly, lane1FlyProbability: 37.74, flyPrediction: { ...normalOnly.flyPrediction, probability: 99 } };
+const rateRow = scoreContext.scoresRow(5, { predictionFinal: withRate }, null, { status: "pending" }, "toda");
+assert.equal(rateRow.status, "結果待ち");
+assert.equal(rateRow.flyRate, 37.74);
+assert.match(scoreContext.scoresRaceMeta(rateRow, true), /飛び率 37\.7%/);
+assert.match(scoreContext.scoresRaceMeta(normalRow, true), /通常的中/);
+assert.match(scoreContext.scoresRaceMeta(flyRow, true), /飛び的中/);
+assert.match(scoreContext.scoresRaceMeta(bothRow, true), /両方的中/);
+assert.doesNotMatch(scoreContext.scoresRaceMeta(rows[3], true), /scores-hit-label/);
+assert.match(scoreContext.scoresRaceMeta(scoreContext.scoresRow(8, {}, null, { status: "pending" }, "fukuoka"), true), /飛び率 --/);
 
 const history = {
   prediction_history: {
     final: [
-      { generated_at: "2026-10-16T12:00:00+09:00", prediction: miss },
-      { generated_at: "2026-10-16T12:20:00+09:00", prediction: normalOnly },
+      { generated_at: "2026-10-16T12:00:00+09:00", prediction: { ...miss, lane1FlyProbability: 42.04 } },
+      { generated_at: "2026-10-16T12:20:00+09:00", prediction: { ...normalOnly, lane1FlyProbability: 88.8 } },
     ],
   },
 };
-assert.equal(scoreContext.scoresRow(6, history, null, result, "toda").hit, false, "post-result regeneration must not judge the race");
+const cutoffRow = scoreContext.scoresRow(6, history, null, result, "toda");
+assert.equal(cutoffRow.hit, false, "post-result regeneration must not judge the race");
+assert.equal(cutoffRow.flyRate, 42.04, "post-result regeneration must not change the displayed fly rate");
 const missing = scoreContext.scoresRow(7, {}, null, result, "toda");
 assert.equal(missing.hit, false);
 assert.equal(missing.note, "公開済み最終買い目なし");

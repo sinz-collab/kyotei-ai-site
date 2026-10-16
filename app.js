@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261016-toda-fukuoka-ticket-tabs-1";
+const SITE_BUILD = "20261016-toda-fukuoka-scores-1";
 
 let manifest = null;
 let currentPayload = null;

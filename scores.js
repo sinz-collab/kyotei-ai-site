@@ -64,6 +64,13 @@ function scoresTickets(p, venueSlug) {
     .flat();
 }
 
+function scoresFlyRate(p) {
+  const raw = p?.lane1FlyProbability ?? p?.flyPrediction?.probability;
+  if (raw === undefined || raw === null || raw === '') return null;
+  const value = Number(String(raw).replace(/[％%\s]/g, ''));
+  return Number.isFinite(value) && value >= 0 && value <= 100 ? value : null;
+}
+
 function scoresCancelled(result) {
   return ['cancelled', 'canceled', 'aborted', 'void', 'no_race', 'not_established'].includes(result?.status)
     || /中止|不成立/.test(String(result?.status || '') + String(result?.message || ''));
@@ -77,10 +84,15 @@ function scoresRow(raceNo, raceData, legacy, result, venueSlug) {
   const payout = /^\d+$/.test(payoutText) ? Number(payoutText) : null;
   const dedicatedFlyVenue = ['toda', 'fukuoka'].includes(venueSlug);
   const final = scoresFinal(raceData, legacy, dedicatedFlyVenue ? result : null);
-  const hit = confirmed && scoresTickets(final, venueSlug).some((ticket) => scoresCombo(typeof ticket === 'string' ? ticket : ticket?.combo || ticket?.combination || ticket?.ticket || ticket?.bet) === order);
+  const ticketHit = (tickets) => tickets.some((ticket) => scoresCombo(typeof ticket === 'string' ? ticket : ticket?.combo || ticket?.combination || ticket?.ticket || ticket?.bet) === order);
+  const normalHit = confirmed && ticketHit(scoresNormalTickets(final));
+  const flyHit = confirmed && dedicatedFlyVenue && ticketHit(Array.isArray(final?.flyPrediction?.tickets) ? final.flyPrediction.tickets : []);
+  const hit = dedicatedFlyVenue ? normalHit || flyHit : confirmed && ticketHit(scoresTickets(final, venueSlug));
+  const hitType = !hit ? '' : normalHit && flyHit ? 'both' : normalHit ? 'normal' : 'fly';
   return { race: raceNo, order: confirmed ? order : '', confirmed, hit, payout: confirmed ? payout : null,
     status: confirmed ? (hit ? '的中' : '不的中') : '結果待ち', icon: confirmed ? (hit ? '✅' : '❌') : '⏳',
-    note: confirmed && !final ? '公開済み最終買い目なし' : '' };
+    note: confirmed && !final ? '公開済み最終買い目なし' : '',
+    flyRate: dedicatedFlyVenue ? scoresFlyRate(final) : null, hitType };
 }
 
 function scoresTotal(rows) {
@@ -90,6 +102,31 @@ function scoresTotal(rows) {
 
 function scoresSummary(total) {
   return `<b>${total.hits}/${total.confirmed}的中</b><b>${total.confirmed ? (100 * total.hits / total.confirmed).toFixed(1) : '0.0'}%</b><b>払戻 ¥${total.payout.toLocaleString('ja-JP')}</b>`;
+}
+
+function scoresHitBreakdown(rows) {
+  return rows.reduce((counts, row) => {
+    if (row.hitType === 'normal') counts.normal += 1;
+    if (row.hitType === 'fly') counts.fly += 1;
+    if (row.hitType === 'both') counts.both += 1;
+    return counts;
+  }, { normal: 0, fly: 0, both: 0 });
+}
+
+function scoresHitBreakdownHtml(rows) {
+  const counts = scoresHitBreakdown(rows);
+  return `<div class="scores-hit-breakdown"><b>通常的中 <span>${counts.normal}</span></b><b>飛び的中 <span>${counts.fly}</span></b><b>両方的中 <span>${counts.both}</span></b></div>`;
+}
+
+function scoresRaceMeta(row, dedicatedFlyVenue) {
+  if (!dedicatedFlyVenue) return row.note ? `<small>${esc(row.note)}</small>` : '';
+  const rate = row.flyRate === null ? '--' : `${row.flyRate.toFixed(1)}%`;
+  const labels = {
+    normal: '<em class="scores-hit-label normal">通常的中</em>',
+    fly: '<em class="scores-hit-label fly">飛び的中</em>',
+    both: '<em class="scores-hit-label both">両方的中</em>',
+  };
+  return `<small class="scores-fly-rate">飛び率 ${rate}</small>${labels[row.hitType] || ''}${row.note ? `<small>${esc(row.note)}</small>` : ''}`;
 }
 
 async function loadScoresVenue(venue, date) {
@@ -151,9 +188,10 @@ async function renderScores() {
       <p class="note">確定レースのみ集計（中止・不成立を除外）。払戻合計は的中した3連単の公式払戻（各100円）。</p></div>`
       + (results.map(({ venue, rows, failed }) => `<article class="card scores-venue"><h2>${esc(venue.name)}</h2>
         <div class="scores-summary">${scoresSummary(scoresTotal(rows))}</div>
+        ${['toda', 'fukuoka'].includes(venue.slug) ? scoresHitBreakdownHtml(rows) : ''}
         ${failed ? '<p class="note">一部データを読み込めませんでした。再読み込みで更新してください。</p>' : ''}
         <div class="scores-races">${rows.map((row) => `<div class="scores-row"><b>${row.race}R</b>
-          <span>${row.icon} ${row.status}${row.note ? `<small>${esc(row.note)}</small>` : ''}</span>
+          <span>${row.icon} ${row.status}${scoresRaceMeta(row, ['toda', 'fukuoka'].includes(venue.slug))}</span>
           <b>${esc(row.order || '−')}</b><span>${row.payout !== null ? `¥${row.payout.toLocaleString('ja-JP')}` : '−'}</span></div>`).join('')}</div></article>`).join('')
         || '<div class="card note">本日の開催場はありません。</div>');
   } catch (_) {
