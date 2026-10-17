@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261016-score-label-column-1";
+const SITE_BUILD = "20261017-ashiya-live-v42";
 
 let manifest = null;
 let currentPayload = null;
@@ -47,11 +47,23 @@ function ticketProbabilityText(ticket, isFlyTicket) {
 }
 
 function dedicatedFlyTicketSets(prediction) {
+  const normal = [
+    ...(Array.isArray(prediction?.ai) ? prediction.ai : []),
+    ...(Array.isArray(prediction?.balance) ? prediction.balance : []),
+    ...(Array.isArray(prediction?.aiUpset) ? prediction.aiUpset : []),
+  ].filter((ticket, index, tickets) => {
+    const combo = typeof ticket === "string"
+      ? ticket
+      : String(ticket?.combo || ticket?.combination || ticket?.ticket || "");
+    return combo && tickets.findIndex((candidate) => {
+      const candidateCombo = typeof candidate === "string"
+        ? candidate
+        : String(candidate?.combo || candidate?.combination || candidate?.ticket || "");
+      return candidateCombo === combo;
+    }) === index;
+  });
   return {
-    normal: [
-      ...(Array.isArray(prediction?.ai) ? prediction.ai : []),
-      ...(Array.isArray(prediction?.aiUpset) ? prediction.aiUpset : []),
-    ],
+    normal,
     fly: Array.isArray(prediction?.flyPrediction?.tickets) ? prediction.flyPrediction.tickets : [],
   };
 }
@@ -947,11 +959,11 @@ function pred() {
 
   const ticketRows = (rows, role) =>
     (Array.isArray(rows) ? rows : []).map((item) => {
-      const combo = item.combination || item.combo || "";
+      const combo = typeof item === "string" ? item : item.combination || item.combo || "";
       return {
         combo,
-        role: item.category || role,
-        prob: item.score_pct ?? item.prob ?? 0,
+        role: (typeof item === "string" ? "" : item.category) || role,
+        prob: typeof item === "string" ? 0 : item.score_pct ?? item.prob ?? 0,
         odds: ticketOdds(item, combo)
       };
     });
@@ -1821,9 +1833,12 @@ function renderPrediction() {
   const lane1FlyLevel = safe(p.lane1FlyLevel, "通常");
   const isTodaFly = currentPayload?.venueId === "toda" && ["pre", "final"].includes(p.flyPrediction?.status);
   const isFukuokaFly = currentPayload?.venueId === "fukuoka" && ["morning", "live", "unavailable"].includes(p.flyPrediction?.status);
+  const isAshiyaFly = currentPayload?.venueId === "ashiya"
+    && ["live", "unavailable"].includes(p.flyPrediction?.status)
+    && p.flyPrediction?.modelVersion === "strength_25_frozen";
   const isWakamatsuFly = currentPayload?.venueId === "wakamatsu"
     && p.flyPrediction?.modelVersion === "wakamatsu_fly_tickets_v1";
-  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly;
+  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly;
   const dedicatedFly = isDedicatedFlyVenue ? p.flyPrediction : null;
   const todaFly = isTodaFly ? dedicatedFly : null;
   const lane1FlyProbability = firstValue(p.lane1FlyProbability, p.flyPrediction?.probability);
@@ -1859,7 +1874,7 @@ function renderPrediction() {
       flow.reviewed ||
       showDeltas
     );
-  const lane1FlyStageLabel = currentPayload?.venueId === "wakamatsu"
+  const lane1FlyStageLabel = currentPayload?.venueId === "wakamatsu" || currentPayload?.venueId === "ashiya"
     ? (isFinalStage ? "LIVE" : "朝")
     : "";
 
@@ -1984,7 +1999,7 @@ function renderResult() {
   const p = pred(), r = race().result || p.result || {};
   const order = normalizeResultOrder(r.order);
   const resultCombo = validResultOrder(order) ? order.join("-") : "";
-  const dedicatedFlyVenue = ["toda", "fukuoka"].includes(currentVenueSlug);
+  const dedicatedFlyVenue = ["toda", "fukuoka", "ashiya"].includes(currentVenueSlug);
   const publishedPrediction = dedicatedFlyVenue ? scoresFinal(race(), p, r) : p;
   const hitAi = dedicatedFlyVenue
     ? ticketListHit(scoresNormalTickets(publishedPrediction), resultCombo)

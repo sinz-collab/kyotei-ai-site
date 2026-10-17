@@ -60,7 +60,7 @@ function scoresNormalTickets(p) {
 
 function scoresTickets(p, venueSlug) {
   return [scoresNormalTickets(p),
-    ['toda', 'fukuoka'].includes(venueSlug) && Array.isArray(p?.flyPrediction?.tickets) ? p.flyPrediction.tickets : []]
+    ['toda', 'fukuoka', 'ashiya'].includes(venueSlug) && Array.isArray(p?.flyPrediction?.tickets) ? p.flyPrediction.tickets : []]
     .flat();
 }
 
@@ -82,7 +82,7 @@ function scoresRow(raceNo, raceData, legacy, result, venueSlug) {
   const confirmed = Boolean(order) && ['ok', 'complete', 'confirmed'].includes(result?.status);
   const payoutText = String(result?.payout3t ?? '').replace(/[¥￥円,\s]/g, '');
   const payout = /^\d+$/.test(payoutText) ? Number(payoutText) : null;
-  const dedicatedFlyVenue = ['toda', 'fukuoka'].includes(venueSlug);
+  const dedicatedFlyVenue = ['toda', 'fukuoka', 'ashiya'].includes(venueSlug);
   const final = scoresFinal(raceData, legacy, dedicatedFlyVenue ? result : null);
   const ticketHit = (tickets) => tickets.some((ticket) => scoresCombo(typeof ticket === 'string' ? ticket : ticket?.combo || ticket?.combination || ticket?.ticket || ticket?.bet) === order);
   const normalHit = confirmed && ticketHit(scoresNormalTickets(final));
