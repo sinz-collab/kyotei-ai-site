@@ -8,6 +8,9 @@ assert.match(app, /firstValue\(p\.lane1FlyProbability, p\.flyPrediction\?\.proba
 assert.match(app, /const lane1FlyStageLabel = currentPayload\?\.venueId === "wakamatsu"/);
 assert.match(app, /isFinalStage \? "LIVE" : "朝"/);
 assert.match(app, /1号艇飛び確率\$\{lane1FlyStageLabel/);
+assert.match(app, /hasAshiyaLiveFlyProbability/);
+assert.match(app, /変化 \$\{Number\.isFinite\(ashiyaFlyDelta\)/);
+assert.match(app, /currentPayload\?\.venueId === "ashiya"\s*\? ashiyaFlyProbabilityCard/);
 assert.match(app, /raceData\?\.prediction\?\.lane1FlyProbability/);
 assert.match(app, /if \(v === undefined \|\| v === null \|\| v === ""\) return "—"/);
 assert.doesNotMatch(app, /<span>荒れ指数<\/span>/);

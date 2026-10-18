@@ -13,6 +13,13 @@ assert.match(app, /currentPayload\?\.venueId === "wakamatsu" \|\| currentPayload
 assert.match(app, /\["toda", "fukuoka", "ashiya"\]\.includes\(currentVenueSlug\)/);
 assert.match(scores, /\['toda', 'fukuoka', 'ashiya'\]\.includes\(venueSlug\)/);
 assert.match(app, /safe\(currentTrifectaOdds\(t\.combo\)\)/);
+assert.match(app, /p\.lane1FlyProbabilityMorning/);
+assert.match(app, /p\.lane1FlyProbabilityLive/);
+assert.match(app, /p\.lane1FlyProbabilityDeltaPt/);
+assert.match(app, /朝 \$\{lane1FlyProbabilityText\(ashiyaMorningFlyProbability\)\} ｜ LIVE/);
+assert.match(app, /本予想・展示／オリテン反映済み/);
+assert.match(app, /朝予想は1号艇1着率の単純補数/);
+assert.match(app, /朝予想・簡易基準/);
 
 const setsStart = app.indexOf("function dedicatedFlyTicketSets");
 const setsEnd = app.indexOf("const lane1FlyProbabilityText", setsStart);
