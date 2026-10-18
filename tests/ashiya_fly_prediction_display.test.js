@@ -16,7 +16,7 @@ assert.match(app, /safe\(currentTrifectaOdds\(t\.combo\)\)/);
 assert.match(app, /p\.lane1FlyProbabilityMorning/);
 assert.match(app, /p\.lane1FlyProbabilityLive/);
 assert.match(app, /p\.lane1FlyProbabilityDeltaPt/);
-assert.match(app, /朝 \$\{lane1FlyProbabilityText\(ashiyaMorningFlyProbability\)\} ｜ LIVE/);
+assert.match(app, /朝 \$\{pct1\(ashiyaMorningFlyProbability\)\} ｜ LIVE \$\{pct1\(ashiyaLiveFlyProbability\)\}/);
 assert.match(app, /本予想・展示／オリテン反映済み/);
 assert.match(app, /朝予想は1号艇1着率の単純補数/);
 assert.match(app, /朝予想・簡易基準/);
