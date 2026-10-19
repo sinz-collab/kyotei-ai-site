@@ -46,6 +46,15 @@ function ticketProbabilityText(ticket, isFlyTicket) {
   return probability === undefined ? "-" : pct1(probability);
 }
 
+function ticketSelectionScorePercent(ticketSelection, combo) {
+  const row = (ticketSelection?.ordered || []).find((item) =>
+    String(item?.combination || item?.combo || item?.ticket || "").trim() === combo
+  );
+  const score = Number(row?.score ?? row?.probability ?? row?.prob);
+  if (!Number.isFinite(score)) return undefined;
+  return score <= 1 ? score * 100 : score;
+}
+
 function dedicatedFlyTicketSets(prediction) {
   const normal = [
     ...(Array.isArray(prediction?.ai) ? prediction.ai : []),
@@ -835,6 +844,8 @@ function pred() {
 
   if (legacy && !useFinalPrediction) {
     const oddsMap = raceData?.odds || legacy.odds || {};
+    const isAshiyaV51 = currentVenueSlug === "ashiya"
+      && legacy.ticketSelection?.modelVersion === "ashiya_v51_631";
 
     const normalizeLegacyTickets = (rows, defaultRole) =>
       (Array.isArray(rows) ? rows : [])
@@ -863,9 +874,14 @@ function pred() {
               defaultRole,
             prob:
               isString
-                ? 0
+                ? (isAshiyaV51
+                  ? ticketSelectionScorePercent(legacy.ticketSelection, combo) ?? 0
+                  : 0)
                 : item?.prob ??
                   item?.score_pct ??
+                  (isAshiyaV51
+                    ? ticketSelectionScorePercent(legacy.ticketSelection, combo)
+                    : undefined) ??
                   0,
             odds:
               existingOdds && existingOdds !== "-"
@@ -884,12 +900,12 @@ function pred() {
 
     const deviationTickets = normalizeLegacyTickets(
       legacy.balance,
-      "ずらし"
+      isAshiyaV51 ? "ズレ" : "ずらし"
     );
 
     const upsetTickets = normalizeLegacyTickets(
       legacy.aiUpset,
-      "荒れ"
+      isAshiyaV51 ? "シナリオ穴" : "荒れ"
     );
 
     return {
@@ -967,6 +983,9 @@ function pred() {
         odds: ticketOdds(item, combo)
       };
     });
+  const isAshiyaV51 = currentVenueSlug === "ashiya"
+    && (source.ticket_selection?.modelVersion === "ashiya_v51_631"
+      || source.ticketSelection?.modelVersion === "ashiya_v51_631");
   const normalizedPrediction = {
     ...source,
     win: source.probabilities?.win || source.win || {},
@@ -976,11 +995,11 @@ function pred() {
     sab: source.sab?.grade || source.sab || "-",
     ai: source.ai ? fillTicketOdds(source.ai) : [
       ...ticketRows(source.tickets?.main, "本線"),
-      ...ticketRows(source.tickets?.deviation, "ずらし")
+      ...ticketRows(source.tickets?.deviation, isAshiyaV51 ? "ズレ" : "ずらし")
     ],
     aiUpset: source.aiUpset ? fillTicketOdds(source.aiUpset) : ticketRows(
       source.tickets?.upset || source.tickets?.insurance,
-      "荒れ"
+      isAshiyaV51 ? "シナリオ穴" : "荒れ"
     ),
     upsetIndex: source.upsetIndex ?? 0,
     lane1FlyProbability: source.lane1FlyProbability,

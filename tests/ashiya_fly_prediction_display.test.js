@@ -21,6 +21,21 @@ assert.match(app, /本予想・展示／オリテン反映済み/);
 assert.match(app, /朝予想は1号艇1着率の単純補数/);
 assert.match(app, /朝予想・簡易基準/);
 
+const scoreStart = app.indexOf("function ticketSelectionScorePercent");
+const scoreEnd = app.indexOf("function dedicatedFlyTicketSets", scoreStart);
+const scoreContext = {};
+vm.createContext(scoreContext);
+vm.runInContext(`${app.slice(scoreStart, scoreEnd)}; globalThis.scorePercent = ticketSelectionScorePercent;`, scoreContext);
+const selection = {
+  ordered: [
+    { combination: "1-2-3", score: 0.0525 },
+    { combination: "1-3-2", score: 7.5 },
+  ],
+};
+assert.equal(scoreContext.scorePercent(selection, "1-2-3"), 5.25);
+assert.equal(scoreContext.scorePercent(selection, "1-3-2"), 7.5);
+assert.equal(scoreContext.scorePercent(selection, "2-1-3"), undefined);
+
 const setsStart = app.indexOf("function dedicatedFlyTicketSets");
 const setsEnd = app.indexOf("const lane1FlyProbabilityText", setsStart);
 const context = {};
@@ -28,13 +43,15 @@ vm.createContext(context);
 vm.runInContext(`${app.slice(setsStart, setsEnd)}; globalThis.ticketSets = dedicatedFlyTicketSets;`, context);
 
 const main = Array.from({ length: 6 }, (_, index) => ({ combo: `1-2-${index + 1}`, role: "本線" }));
-const deviation = Array.from({ length: 2 }, (_, index) => ({ combo: `2-1-${index + 3}`, role: "ズレ" }));
-const upset = Array.from({ length: 2 }, (_, index) => ({ combo: `${index + 3}-1-2`, role: "荒れ" }));
+const deviation = Array.from({ length: 3 }, (_, index) => ({ combo: `2-1-${index + 3}`, role: "ズレ" }));
+const upset = [{ combo: "6-1-2", role: "シナリオ穴" }];
 const fly = Array.from({ length: 10 }, (_, index) => ({ combo: `2-${(index % 5) + 1}-${((index + 1) % 5) + 1}`, role: "飛び" }));
 const grouped = context.ticketSets({ ai: main, balance: deviation, aiUpset: upset, flyPrediction: { tickets: fly } });
 assert.equal(grouped.normal.length, 10);
 assert.equal(grouped.fly.length, 10);
-assert.deepEqual(Array.from(grouped.normal, (ticket) => ticket.role), ["本線", "本線", "本線", "本線", "本線", "本線", "ズレ", "ズレ", "荒れ", "荒れ"]);
+assert.deepEqual(Array.from(grouped.normal, (ticket) => ticket.role), ["本線", "本線", "本線", "本線", "本線", "本線", "ズレ", "ズレ", "ズレ", "シナリオ穴"]);
+assert.match(app, /ashiya_v51_631/);
+assert.match(app, /シナリオ穴/);
 
 const legacyGrouped = context.ticketSets({
   ai: [...main, ...deviation],
