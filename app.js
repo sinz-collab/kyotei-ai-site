@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261017-ashiya-live-v42";
+const SITE_BUILD = "20261020-tokoname-fly-v4";
 
 let manifest = null;
 let currentPayload = null;
@@ -1855,9 +1855,12 @@ function renderPrediction() {
   const isAshiyaFly = currentPayload?.venueId === "ashiya"
     && ["live", "unavailable"].includes(p.flyPrediction?.status)
     && p.flyPrediction?.modelVersion === "strength_25_frozen";
+  const isTokonameFly = currentPayload?.venueId === "tokoname"
+    && ["waiting", "complete", "unavailable"].includes(p.flyPrediction?.status)
+    && p.flyPrediction?.modelVersion === "tokoname_fly_tickets_v4";
   const isWakamatsuFly = currentPayload?.venueId === "wakamatsu"
     && p.flyPrediction?.modelVersion === "wakamatsu_fly_tickets_v1";
-  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly;
+  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly || isTokonameFly;
   const dedicatedFly = isDedicatedFlyVenue ? p.flyPrediction : null;
   const todaFly = isTodaFly ? dedicatedFly : null;
   const lane1FlyProbability = firstValue(p.lane1FlyProbability, p.flyPrediction?.probability);
@@ -1975,7 +1978,7 @@ function renderPrediction() {
       const isFlyTicket = usesFlyTicketTabs && ticketMode === "aiUpset";
       const metric = ticketProbabilityText(t, isFlyTicket);
       return `<div class="ticket"><div><div class="combo">${safe(t.combo)}</div><span class="role">${safe(t.role, "")}</span></div><div><span class="note">予想確率</span><br><b>${metric}</b></div><div><span class="note">LIVEオッズ</span><br><b>${safe(currentTrifectaOdds(t.combo))}</b></div></div>`;
-    }).join("") || `<div class="note">${usesFlyTicketTabs && ticketMode === "aiUpset" ? (isFukuokaFly && dedicatedFly?.status === "unavailable" ? "進入変更または入力不足のため、1号艇飛び買い目は表示できません。" : "着順率が不足しているため、1号艇飛び買い目は算出できません。") : (ticketMode === "aiUpset" ? "AI荒れ買い目はありません。" : "買い目はまだありません。")}</div>`}
+    }).join("") || `<div class="note">${usesFlyTicketTabs && ticketMode === "aiUpset" ? (isTokonameFly && dedicatedFly?.status === "waiting" ? "展示待ちです。通常展示が揃うと1号艇飛び買い目を生成します。" : (isTokonameFly ? "必須入力が不足しているため、1号艇飛び買い目は算出できません。" : (isFukuokaFly && dedicatedFly?.status === "unavailable" ? "進入変更または入力不足のため、1号艇飛び買い目は表示できません。" : "着順率が不足しているため、1号艇飛び買い目は算出できません。"))) : (ticketMode === "aiUpset" ? "AI荒れ買い目はありません。" : "買い目はまだありません。")}</div>`}
   </div>`;
   return `<div class="card">
     <div class="stage ${stageColor}"><div><b>${stageLabel}</b><br>${stageStatus}</div><span>${stageLabel}</span></div>
@@ -2051,7 +2054,7 @@ function renderResult() {
   const p = pred(), r = race().result || p.result || {};
   const order = normalizeResultOrder(r.order);
   const resultCombo = validResultOrder(order) ? order.join("-") : "";
-  const dedicatedFlyVenue = ["toda", "fukuoka", "ashiya"].includes(currentVenueSlug);
+  const dedicatedFlyVenue = ["toda", "fukuoka", "ashiya", "tokoname"].includes(currentVenueSlug);
   const publishedPrediction = dedicatedFlyVenue ? scoresFinal(race(), p, r) : p;
   const hitAi = dedicatedFlyVenue
     ? ticketListHit(scoresNormalTickets(publishedPrediction), resultCombo)
