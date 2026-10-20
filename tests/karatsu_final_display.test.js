@@ -130,4 +130,47 @@ assert.equal(otherVenuePrediction.status, undefined);
 assert.equal(otherVenuePrediction.probabilityReviewStatus, undefined);
 assert.match(context.renderPredictionForTest(), /現在は前データでの仮予想です/);
 
+const tokonameFinal = {
+  venueId: "tokoname",
+  venue: "常滑",
+  date: "2026-10-20",
+  races: [{
+    race: 11,
+    prediction: {
+      status: "ready",
+      engine: "tokoname_engine",
+      engine_version: "1.6",
+      prediction_phase: "final",
+      stage: "final",
+      engine_recalculated_after_exhibition: true,
+      original_exhibition_available: true,
+      engine_run: {
+        completed: true,
+        source_engine: "tokoname_engine_v1.6",
+        inputs: ["morning", "direct", "exhibition", "original_exhibition", "odds"],
+      },
+      data_flags: {
+        original_exhibition_available: true,
+        odds_used_for_probability: false,
+      },
+      predictionStage: {
+        code: "final",
+        label: "本予想",
+        badge: "本予想",
+        statusText: "既存常滑エンジンで展示・直前情報を再計算済み",
+      },
+      probabilities: {
+        win: probabilities(), second: probabilities(1), third: probabilities(2),
+      },
+      tickets: { main: [], deviation: [], upset: [] },
+      sab: { grade: "A" },
+    },
+  }],
+};
+context.setDisplayState("tokoname", tokonameFinal, 11);
+const tokonameFinalHtml = context.renderPredictionForTest();
+assert.match(tokonameFinalHtml, /本予想/);
+assert.match(tokonameFinalHtml, /再計算済みの本予想です/);
+assert.doesNotMatch(tokonameFinalHtml, /現在は前データでの仮予想です/);
+
 console.log("Karatsu final display tests passed");
