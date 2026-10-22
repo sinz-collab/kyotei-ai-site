@@ -118,7 +118,7 @@ function scoresHitBreakdown(rows) {
 
 function scoresHitBreakdownHtml(rows) {
   const counts = scoresHitBreakdown(rows);
-  return `<div class="scores-hit-breakdown"><b>通常的中 <span>${counts.normal}</span></b><b>飛び的中 <span>${counts.fly}</span></b><b>両方的中 <span>${counts.both}</span></b></div>`;
+  return `<div class="scores-hit-breakdown"><b class="normal">通常的中 <span>${counts.normal}</span></b><b class="fly">飛び的中 <span>${counts.fly}</span></b><b class="both">両方的中 <span>${counts.both}</span></b></div>`;
 }
 
 function scoresRaceMeta(row, dedicatedFlyVenue) {
@@ -190,12 +190,14 @@ async function renderScores() {
       results.push(await loadScoresVenue(venue, today));
       if (request !== scoresRequest) return;
     }
-    const total = scoresTotal(results.flatMap((r) => r.rows));
+    const allRows = results.flatMap((r) => r.rows);
+    const total = scoresTotal(allRows);
     target.innerHTML = `<div class="card"><h2>${esc(today)} 本日の成績</h2><div class="scores-summary">${scoresSummary(total)}</div>
+      ${scoresHitBreakdownHtml(allRows)}
       <p class="note">確定レースのみ集計（中止・不成立を除外）。払戻合計は的中した3連単の公式払戻（各100円）。</p></div>`
       + (results.map(({ venue, rows, failed }) => `<article class="card scores-venue"><h2>${esc(venue.name)}</h2>
         <div class="scores-summary">${scoresSummary(scoresTotal(rows))}</div>
-        ${scoresFlyVenue(venue.slug) ? scoresHitBreakdownHtml(rows) : ''}
+        ${scoresHitBreakdownHtml(rows)}
         ${failed ? '<p class="note">一部データを読み込めませんでした。再読み込みで更新してください。</p>' : ''}
         <div class="scores-races">${rows.map((row) => `<div class="scores-row"><b>${row.race}R</b>
           <span class="scores-race-status">${row.icon} ${row.status}${scoresRaceMeta(row, scoresFlyVenue(venue.slug))}</span>

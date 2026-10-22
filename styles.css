@@ -4,7 +4,7 @@
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
 }
 .scores-summary{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;color:var(--navy)}
-.scores-hit-breakdown{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:9px}.scores-hit-breakdown b{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:11px}.scores-hit-breakdown span{color:var(--navy);font-size:13px}
+.scores-hit-breakdown{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:9px}.scores-hit-breakdown b{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;color:#fff;font-size:11px}.scores-hit-breakdown span{color:inherit;font-size:13px}.scores-hit-breakdown .normal{background:#15803d}.scores-hit-breakdown .fly{background:#2563eb}.scores-hit-breakdown .both{background:#7e22ce}
 .scores-venue h2{margin:0 0 8px;font-size:20px}
 .scores-races{margin-top:12px}
 .scores-row{display:grid;grid-template-columns:28px minmax(0,1fr) 64px 50px 68px;gap:4px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:12px}

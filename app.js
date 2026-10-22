@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261022-all-venue-scores";
+const SITE_BUILD = "20261022-score-breakdown-all-venues";
 
 let manifest = null;
 let currentPayload = null;
