@@ -9,6 +9,7 @@ const end = appSource.indexOf("async function loadLiveRace");
 assert.ok(start >= 0 && end > start);
 
 const context = {
+  currentVenueSlug: "heiwajima",
   firstValue: (...values) => values.find((value) => value !== undefined && value !== null && value !== ""),
   num(value, fallback = 0) {
     const parsed = Number(String(value ?? "").replace(/[^\d.\-]/g, ""));

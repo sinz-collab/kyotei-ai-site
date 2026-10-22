@@ -20,6 +20,9 @@ assert.ok(start >= 0 && end > start);
 
 const context = {
   currentVenueSlug: "biwako",
+  firstValue(...values) {
+    return values.find((value) => value !== undefined && value !== null && value !== "");
+  },
   num(value, fallback = 0) {
     const parsed = Number(String(value ?? "").replace(/[^\d.\-]/g, ""));
     return Number.isFinite(parsed) ? parsed : fallback;
@@ -30,6 +33,8 @@ vm.runInContext(
   `${appSource.slice(start, end)}
    globalThis.applyLivePredictionReviewForTest = applyLivePredictionReview;
    globalThis.completeOriginalExhibitionRowsForTest = completeOriginalExhibitionRows;
+   globalThis.hasDisplayableOriginalExhibitionForTest = hasDisplayableOriginalExhibition;
+   globalThis.mergeOriginalExhibitionRowsForTest = mergeOriginalExhibitionRows;
    globalThis.isVerifiedTokonameFinalPredictionForTest = isVerifiedTokonameFinalPrediction;`,
   context,
 );
@@ -86,7 +91,28 @@ const partialBiwakoOriginal = document("entries", rows("turn_time", [6.1, 6.2, 6
 partialBiwakoOriginal.status = "partial";
 assert.equal(context.completeOriginalExhibitionRowsForTest(partialBiwakoOriginal).length, 6);
 partialBiwakoOriginal.data.entries.pop();
-assert.equal(context.completeOriginalExhibitionRowsForTest(partialBiwakoOriginal), null);
+const fiveBiwakoRows = context.completeOriginalExhibitionRowsForTest(partialBiwakoOriginal);
+assert.equal(fiveBiwakoRows.length, 5);
+const mergedFiveRows = context.mergeOriginalExhibitionRowsForTest({}, fiveBiwakoRows, []);
+assert.equal(context.hasDisplayableOriginalExhibitionForTest(mergedFiveRows, true, null), true);
+assert.equal(mergedFiveRows["6"].turn, undefined);
+
+const sparseBiwakoOriginal = document("entries", [
+  { lane: 1, lap_time: null, turn_time: 6.1, straight_time: null },
+  { lane: 2, lap_time: null, turn_time: null, straight_time: 8.2 },
+  { lane: 3, lap_time: null, turn_time: null, straight_time: null },
+], false);
+sparseBiwakoOriginal.status = "partial";
+const sparseBiwakoRows = context.completeOriginalExhibitionRowsForTest(sparseBiwakoOriginal);
+assert.equal(sparseBiwakoRows.length, 2);
+const mergedSparseRows = context.mergeOriginalExhibitionRowsForTest({}, sparseBiwakoRows, []);
+assert.equal(context.hasDisplayableOriginalExhibitionForTest(mergedSparseRows, true, null), true);
+
+const emptyBiwakoOriginal = document("entries", [
+  { lane: 1, lap_time: null, turn_time: null, straight_time: null },
+], false);
+emptyBiwakoOriginal.status = "partial";
+assert.equal(context.completeOriginalExhibitionRowsForTest(emptyBiwakoOriginal), null);
 for (const key of ["win", "second", "third"]) {
   const total = Object.values(reviewed[key]).reduce((sum, value) => sum + value, 0);
   assert.ok(Math.abs(total - 100) < 0.001);

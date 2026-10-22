@@ -278,24 +278,41 @@ function completeSixLaneRows(document, key) {
 }
 
 function completeOriginalExhibitionRows(document) {
-  let rows = completeSixLaneRows(document, "entries");
-  if (!rows && currentVenueSlug === "biwako"
+  if (currentVenueSlug === "biwako"
       && ["partial", "complete"].includes(document?.status)) {
     const candidate = Array.isArray(document?.data?.entries) ? document.data.entries : [];
-    const lanes = candidate.map((row) => Number(row.lane));
-    if (candidate.length === 6 && new Set(lanes).size === 6
-        && lanes.every((laneNo) => laneNo >= 1 && laneNo <= 6)
-        && candidate.every((row) => positiveNumber(row.turn_time) !== null
-          && positiveNumber(row.straight_time) !== null)) {
-      rows = candidate;
-    }
+    const rows = candidate.filter((row) => {
+      const laneNo = Number(row?.lane);
+      return laneNo >= 1 && laneNo <= 6
+        && [row.lap_time, row.turn_time, row.straight_time]
+          .some((value) => positiveNumber(value) !== null);
+    });
+    const lanes = rows.map((row) => Number(row.lane));
+    return rows.length > 0 && new Set(lanes).size === rows.length ? rows : null;
   }
+  const rows = completeSixLaneRows(document, "entries");
   if (!rows) return null;
   return rows.every((row) => ["turn_time", "straight_time"]
     .every((key) => positiveNumber(row[key]) !== null)
     && (currentVenueSlug === "biwako" || positiveNumber(row.lap_time) !== null))
     ? rows
     : null;
+}
+
+function hasDisplayableOriginalExhibition(original, available, embeddedOriginal) {
+  if (currentVenueSlug === "biwako") {
+    return available === true && [1, 2, 3, 4, 5, 6].some((laneNo) => {
+      const row = original[String(laneNo)] || original[laneNo] || {};
+      return [row.lap ?? row.lap_time, row.turn ?? row.turn_time, row.line || row.straight || row.straight_time]
+        .some((value) => positiveNumber(value) !== null);
+    });
+  }
+  return (available === true || embeddedOriginal?.length === 6)
+    && [1, 2, 3, 4, 5, 6].every((laneNo) => {
+      const row = original[String(laneNo)] || original[laneNo] || {};
+      return [row.lap ?? row.lap_time, row.turn ?? row.turn_time, row.line || row.straight || row.straight_time]
+        .every((value) => positiveNumber(value) !== null);
+    });
 }
 
 function rankRows(rows, valueKey) {
@@ -1761,12 +1778,11 @@ function renderRealtime() {
   const windSpeed = weather.wind || weather.windSpeed || weather.wind_speed;
   const waveHeight = weather.wave || weather.waveHeight || weather.wave_height;
   const hasLast = Object.keys(last).length > 0;
-  const hasOriginal = (rt.originalExhibitionAvailable === true || embeddedOriginal?.length === 6)
-    && [1, 2, 3, 4, 5, 6].every((laneNo) => {
-      const row = original[String(laneNo)] || original[laneNo] || {};
-      return [row.lap ?? row.lap_time, row.turn ?? row.turn_time, row.line || row.straight || row.straight_time]
-        .every((value) => positiveNumber(value) !== null);
-    });
+  const hasOriginal = hasDisplayableOriginalExhibition(
+    original,
+    rt.originalExhibitionAvailable,
+    embeddedOriginal,
+  );
   return `<div class="card"><h2>直前情報</h2>
       <div class="refresh-row"><button class="refresh-btn" onclick="refreshCurrentVenue()">最新データを再読み込み</button></div>
       <div class="note">天候 ${safe(weather.weather)} / 風向 ${windDirectionDisplay} / 風速 ${safe(windSpeed)}m / 波 ${safe(waveHeight)}cm / 水温 ${safe(weather.water || weather.waterTemp)}℃</div>
