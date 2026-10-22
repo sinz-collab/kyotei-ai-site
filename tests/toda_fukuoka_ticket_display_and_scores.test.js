@@ -48,7 +48,20 @@ assert.equal(flyRow.hitType, "fly");
 assert.equal(bothRow.hit, true);
 assert.equal(bothRow.hitType, "both");
 assert.equal(scoreContext.scoresRow(4, { predictionFinal: miss }, null, result, "fukuoka").hit, false);
-assert.equal(scoreContext.scoresRow(5, { predictionFinal: flyOnly }, null, result, "biwako").hit, false, "other venues must not use dedicated fly tickets");
+const biwakoFlyRow = scoreContext.scoresRow(5, { predictionFinal: flyOnly }, null, result, "biwako");
+assert.equal(biwakoFlyRow.hitType, "fly", "Biwako must judge its dedicated fly tickets separately");
+
+const biwakoBothShape = { ...both, tickets: [{ combo: "1-2-3" }], ai: [{ combo: "1-2-3" }], aiUpset: [{ combo: "3-1-2" }] };
+const biwakoFlyOnly = scoreContext.scoresRow(6, { predictionFinal: biwakoBothShape }, null, result, "biwako");
+assert.equal(biwakoFlyOnly.hitType, "fly", "Biwako's aiUpset mirror must not be counted as a normal hit");
+
+const wakamatsuBoth = { phase: "final", tickets: [{ combo: "3-1-2" }], flyPrediction: { tickets: [{ combo: "3-1-2" }] } };
+assert.equal(scoreContext.scoresRow(7, { predictionFinal: wakamatsuBoth }, null, result, "wakamatsu").hitType, "both");
+
+const noFlyTickets = { phase: "final", tickets: [{ combo: "3-1-2" }], lane1FlyProbability: 41.2, flyPrediction: { tickets: [] } };
+const normalFallback = scoreContext.scoresRow(8, { predictionFinal: noFlyTickets }, null, result, "biwako");
+assert.equal(normalFallback.hitType, "normal", "a missing fly ticket set must preserve normal-ticket judgement");
+assert.equal(normalFallback.flyRate, 41.2);
 
 const rows = [normalOnly, flyOnly, both, miss].map((prediction, index) =>
   scoreContext.scoresRow(index + 1, { predictionFinal: prediction }, null, result, index % 2 ? "fukuoka" : "toda"));

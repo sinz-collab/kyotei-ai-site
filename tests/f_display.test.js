@@ -38,7 +38,7 @@ assert.match(source, /compareCell\(rows,row,"grade"\)[^\n]*<td class="compare-f-
 assert.doesNotMatch(source, /class="compare-f-wrap"/);
 assert.match(styles, /\.f-badge\{[^}]*background:#dc2626[^}]*color:#fff[^}]*white-space:nowrap/);
 assert.match(styles, /\.compare-wrap\{[^}]*overflow-x:auto/);
-assert.match(index, /styles\.css\?v=20261021-score-label-cache-fix/);
-assert.match(index, /app\.js\?v=20261021-score-label-cache-fix/);
+assert.match(index, /styles\.css\?v=20261022-all-venue-scores/);
+assert.match(index, /app\.js\?v=20261022-all-venue-scores/);
 
 console.log("F display tests passed");

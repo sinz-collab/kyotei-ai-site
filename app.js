@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261021-score-label-cache-fix";
+const SITE_BUILD = "20261022-all-venue-scores";
 
 let manifest = null;
 let currentPayload = null;
@@ -2056,13 +2056,13 @@ function renderResult() {
   const p = pred(), r = race().result || p.result || {};
   const order = normalizeResultOrder(r.order);
   const resultCombo = validResultOrder(order) ? order.join("-") : "";
-  const dedicatedFlyVenue = ["toda", "fukuoka", "ashiya", "tokoname"].includes(currentVenueSlug);
+  const dedicatedFlyVenue = scoresFlyVenue(currentVenueSlug);
   const publishedPrediction = dedicatedFlyVenue ? scoresFinal(race(), p, r) : p;
   const hitAi = dedicatedFlyVenue
-    ? ticketListHit(scoresNormalTickets(publishedPrediction), resultCombo)
+    ? ticketListHit(scoresNormalTickets(publishedPrediction, currentVenueSlug), resultCombo)
     : storedHit(r.hitAi) || ticketListHit(p.ai, resultCombo);
   const hitUpset = dedicatedFlyVenue
-    ? ticketListHit(publishedPrediction?.flyPrediction?.tickets, resultCombo)
+    ? ticketListHit(scoresFlyTickets(publishedPrediction, currentVenueSlug), resultCombo)
     : storedHit(r.hitUpset) || ticketListHit(p.aiUpset, resultCombo);
   const kimariteNote = r.kimariteSource === "inferred" ? `<small>推定</small>` : "";
   return `<div class="card result-main"><h2>レース結果</h2>
