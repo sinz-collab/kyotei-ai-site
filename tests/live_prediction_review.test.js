@@ -19,6 +19,7 @@ const end = appSource.indexOf("async function loadLiveRace");
 assert.ok(start >= 0 && end > start);
 
 const context = {
+  currentVenueSlug: "biwako",
   num(value, fallback = 0) {
     const parsed = Number(String(value ?? "").replace(/[^\d.\-]/g, ""));
     return Number.isFinite(parsed) ? parsed : fallback;
@@ -28,6 +29,7 @@ vm.createContext(context);
 vm.runInContext(
   `${appSource.slice(start, end)}
    globalThis.applyLivePredictionReviewForTest = applyLivePredictionReview;
+   globalThis.completeOriginalExhibitionRowsForTest = completeOriginalExhibitionRows;
    globalThis.isVerifiedTokonameFinalPredictionForTest = isVerifiedTokonameFinalPrediction;`,
   context,
 );
@@ -78,6 +80,13 @@ assert.equal(context.applyLivePredictionReviewForTest(reviewed, completeDocument
 assert.equal(reviewed.probabilityReviewStatus, "reviewed");
 assert.equal(reviewed.liveReviewMeta.oddsUsedForProbability, false);
 assert.equal(reviewed.liveReviewMeta.exhibitionStartUsedAlone, false);
+
+const partialBiwakoOriginal = document("entries", rows("turn_time", [6.1, 6.2, 6.3, 6.4, 6.5, 6.6])
+  .map((row, index) => ({ ...row, straight_time: 8 + index / 10, lap_time: null })), false);
+partialBiwakoOriginal.status = "partial";
+assert.equal(context.completeOriginalExhibitionRowsForTest(partialBiwakoOriginal).length, 6);
+partialBiwakoOriginal.data.entries.pop();
+assert.equal(context.completeOriginalExhibitionRowsForTest(partialBiwakoOriginal), null);
 for (const key of ["win", "second", "third"]) {
   const total = Object.values(reviewed[key]).reduce((sum, value) => sum + value, 0);
   assert.ok(Math.abs(total - 100) < 0.001);

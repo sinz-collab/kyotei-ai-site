@@ -278,10 +278,22 @@ function completeSixLaneRows(document, key) {
 }
 
 function completeOriginalExhibitionRows(document) {
-  const rows = completeSixLaneRows(document, "entries");
+  let rows = completeSixLaneRows(document, "entries");
+  if (!rows && currentVenueSlug === "biwako"
+      && ["partial", "complete"].includes(document?.status)) {
+    const candidate = Array.isArray(document?.data?.entries) ? document.data.entries : [];
+    const lanes = candidate.map((row) => Number(row.lane));
+    if (candidate.length === 6 && new Set(lanes).size === 6
+        && lanes.every((laneNo) => laneNo >= 1 && laneNo <= 6)
+        && candidate.every((row) => positiveNumber(row.turn_time) !== null
+          && positiveNumber(row.straight_time) !== null)) {
+      rows = candidate;
+    }
+  }
   if (!rows) return null;
-  return rows.every((row) => ["lap_time", "turn_time", "straight_time"]
-    .every((key) => positiveNumber(row[key]) !== null))
+  return rows.every((row) => ["turn_time", "straight_time"]
+    .every((key) => positiveNumber(row[key]) !== null)
+    && (currentVenueSlug === "biwako" || positiveNumber(row.lap_time) !== null))
     ? rows
     : null;
 }
