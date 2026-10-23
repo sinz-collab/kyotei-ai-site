@@ -66,14 +66,6 @@ button:disabled{opacity:.62;cursor:wait}
 .probcard.lane1-fly span{white-space:nowrap}.probcard.lane1-fly.caution{background:#fff8db;border-color:#f2cf66}.probcard.lane1-fly.warning{background:#fff0e5;border-color:#f4a261}.probcard.lane1-fly.danger{background:#fff0f0;border-color:#ef8b8b}.probcard.lane1-fly.caution b{color:#9a6700}.probcard.lane1-fly.warning b{color:#c05621}.probcard.lane1-fly.danger b{color:#c92a2a}
 .probcard.lane1-fly span small{display:inline-flex;margin-left:2px;padding:1px 4px;border-radius:999px;background:#e2e8f0;color:#334155;font-size:8px;font-weight:950;vertical-align:1px}
 .probcard.lane1-fly em{display:inline-flex;margin-top:3px;padding:2px 6px;border-radius:999px;background:#dc2626;color:#fff;font-size:9px;font-style:normal;font-weight:950}
-.probcard.lane1-fly.ashiya-comparison{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;min-width:0;padding:10px 8px}
-.probcard.lane1-fly.ashiya-comparison>span{flex:0 0 100%;font-size:11px;font-weight:900}
-.probcard.lane1-fly .ashiya-fly-values{font-size:16px;white-space:nowrap}
-.probcard.lane1-fly .ashiya-fly-delta{margin:0;padding:2px 7px;background:#e2e8f0;color:#475569;font-size:10px;white-space:nowrap}
-.probcard.lane1-fly .ashiya-fly-delta.up{background:#fee2e2;color:#b91c1c}.probcard.lane1-fly .ashiya-fly-delta.down{background:#dbeafe;color:#1d4ed8}
-.probcard.lane1-fly .ashiya-fly-note{flex:0 0 100%;color:#047857;font-size:10px;font-weight:900;line-height:1.35}
-.probcard.lane1-fly .ashiya-fly-note span{color:#64748b;font-size:9px}
-@media(max-width:390px){.probcard.lane1-fly.ashiya-comparison{gap:5px}.probcard.lane1-fly .ashiya-fly-values{font-size:14px}.probcard.lane1-fly .ashiya-fly-note{font-size:9px}}
 table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px solid #edf2f7;padding:7px;text-align:center}th{background:#f8fafc;color:#667085}
 .table-scroll{max-width:100%;overflow-x:auto;contain:inline-size;-webkit-overflow-scrolling:touch}
 .table-scroll table{min-width:100%;table-layout:fixed}

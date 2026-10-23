@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261022-biwako-partial-original";
+const SITE_BUILD = "20261023-ashiya-biwako-fly-ui";
 
 let manifest = null;
 let currentPayload = null;
@@ -1892,34 +1892,6 @@ function renderPrediction() {
   const dedicatedFly = isDedicatedFlyVenue ? p.flyPrediction : null;
   const todaFly = isTodaFly ? dedicatedFly : null;
   const lane1FlyProbability = firstValue(p.lane1FlyProbability, p.flyPrediction?.probability);
-  const ashiyaMorningLane1Win = firstValue(
-    p.probabilityReview?.[1]?.morningWin,
-    p.probabilityReview?.["1"]?.morningWin,
-  );
-  const ashiyaMorningFlyProbability = firstValue(
-    p.lane1FlyProbabilityMorning,
-    Number.isFinite(Number(ashiyaMorningLane1Win))
-      ? 100 - Number(ashiyaMorningLane1Win)
-      : undefined,
-    p.lane1FlyProbabilityDisplayStage === "morning" || p.lane1FlyProbabilitySource === "morning_simple"
-      ? p.lane1FlyProbability
-      : undefined,
-  );
-  const ashiyaLiveFlyProbability = firstValue(
-    p.lane1FlyProbabilityLive,
-    p.lane1FlyProbabilitySource === "live" ? p.lane1FlyProbability : undefined,
-  );
-  const hasAshiyaLiveFlyProbability = currentPayload?.venueId === "ashiya"
-    && ashiyaLiveFlyProbability !== undefined
-    && ashiyaLiveFlyProbability !== null
-    && ashiyaLiveFlyProbability !== ""
-    && Number.isFinite(Number(ashiyaLiveFlyProbability));
-  const ashiyaFlyDelta = hasAshiyaLiveFlyProbability
-    ? num(
-      p.lane1FlyProbabilityDeltaPt,
-      Number(ashiyaLiveFlyProbability) - Number(ashiyaMorningFlyProbability),
-    )
-    : NaN;
   const lane1FlyClass = p.flyPrediction?.isFly
     ? "danger"
     : (({ "注意": "caution", "警戒": "warning", "危険": "danger" })[lane1FlyLevel] || "normal");
@@ -1952,7 +1924,7 @@ function renderPrediction() {
       flow.reviewed ||
       showDeltas
     );
-  const lane1FlyStageLabel = currentPayload?.venueId === "wakamatsu" || currentPayload?.venueId === "ashiya"
+  const lane1FlyStageLabel = currentPayload?.venueId === "wakamatsu"
     ? (isFinalStage ? "LIVE" : "朝")
     : "";
 
@@ -1996,12 +1968,10 @@ function renderPrediction() {
     : (isFinalStage
       ? `<div class="note">展示・スリット・直前情報を反映して再計算済みの本予想です。</div>`
       : `<div class="note">現在は前データでの仮予想です。展示・スリット・直前情報が入り、再精査済みになると上段に修正後、下段に修正前を表示します。</div>`);
-  const ashiyaFlyProbabilityCard = hasAshiyaLiveFlyProbability
-    ? `<div class="probcard lane1-fly ashiya-comparison ${lane1FlyClass}" title="朝予想は1号艇1着率の単純補数、LIVEはE方式"><span>1号艇飛び確率</span><b class="ashiya-fly-values">朝 ${pct1(ashiyaMorningFlyProbability)} ｜ LIVE ${pct1(ashiyaLiveFlyProbability)}</b><em class="ashiya-fly-delta ${ashiyaFlyDelta > 0 ? "up" : (ashiyaFlyDelta < 0 ? "down" : "flat")}">変化 ${Number.isFinite(ashiyaFlyDelta) ? `${ashiyaFlyDelta >= 0 ? "+" : ""}${ashiyaFlyDelta.toFixed(1)}pt` : "—"}</em><small class="ashiya-fly-note">本予想・展示／オリテン反映済み<br><span>朝予想は1号艇1着率の単純補数（簡易基準）</span></small></div>`
-    : `<div class="probcard lane1-fly ashiya-comparison ${lane1FlyClass}" title="朝予想は1号艇1着率の単純補数"><span>1号艇飛び確率</span><b class="ashiya-fly-values">朝 ${pct1(ashiyaMorningFlyProbability)}</b><small class="ashiya-fly-note"><span>朝予想・簡易基準</span></small></div>`;
-  const flyProbabilityCard = currentPayload?.venueId === "ashiya"
-    ? ashiyaFlyProbabilityCard
-    : `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率${lane1FlyStageLabel ? ` <small>${lane1FlyStageLabel}</small>` : ""}</span><b>${lane1FlyProbabilityText(lane1FlyProbability)}</b>${todaFly ? `<em>${todaFly.isFly ? "飛び優勢" : "逃げ優勢"}</em>` : ""}</div>`;
+  const lane1FlyProbabilityValue = currentPayload?.venueId === "ashiya"
+    ? pct1(lane1FlyProbability)
+    : lane1FlyProbabilityText(lane1FlyProbability);
+  const flyProbabilityCard = `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率${lane1FlyStageLabel ? ` <small>${lane1FlyStageLabel}</small>` : ""}</span><b>${lane1FlyProbabilityValue}</b>${todaFly ? `<em>${todaFly.isFly ? "飛び優勢" : "逃げ優勢"}</em>` : ""}</div>`;
   const ticketSection = `<div class="card toda-normal-tickets${usesFlyTicketTabs ? " wakamatsu-tickets" : ""}"><h2>買い目</h2>
     <div class="mode ${usesFlyTicketTabs ? "wakamatsu-fly-mode" : ""}"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">${upsetModeLabel}</button></div>
     ${displayedTickets.map((t) => {
