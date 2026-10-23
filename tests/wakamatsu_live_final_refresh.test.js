@@ -90,7 +90,7 @@ const context = {
     renderedBadge = context.currentPayload.preds["3"].predictionStage.badge;
   },
   setInterval(callback, milliseconds) {
-    assert.equal(milliseconds, 4 * 60 * 1000);
+    assert.equal(milliseconds, 60 * 1000);
     intervalCallback = callback;
     return 1;
   },

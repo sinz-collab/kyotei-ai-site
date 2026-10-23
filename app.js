@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261023-ashiya-biwako-fly-ui";
+const SITE_BUILD = "20261023-wakamatsu-live-1m";
 
 let manifest = null;
 let currentPayload = null;
@@ -694,7 +694,9 @@ async function refreshSiteBuildIfStale() {
 function startLiveRefresh() {
   if (liveRefreshTimer) clearInterval(liveRefreshTimer);
   let refreshInFlight = false;
-  const refreshInterval = currentVenueSlug === "fukuoka" ? 60 * 1000 : 4 * 60 * 1000;
+  const refreshInterval = ["fukuoka", "wakamatsu"].includes(currentVenueSlug)
+    ? 60 * 1000
+    : 4 * 60 * 1000;
   liveRefreshTimer = setInterval(async () => {
     if (document.hidden || !currentVenueSlug || !currentPayload || refreshInFlight) return;
     refreshInFlight = true;
