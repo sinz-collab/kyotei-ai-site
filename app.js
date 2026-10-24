@@ -1809,6 +1809,96 @@ function renderRealtime() {
     </div>`;
 }
 
+function tideMinutes(value) {
+  const match = String(value || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  return hour >= 0 && hour < 24 && minute >= 0 && minute < 60 ? hour * 60 + minute : null;
+}
+
+function tidePhaseLabel(value) {
+  const normalized = String(value || "").toLowerCase();
+  if (["rising", "上げ", "上げ潮"].includes(normalized)) return "上げ潮";
+  if (["falling", "下げ", "下げ潮"].includes(normalized)) return "下げ潮";
+  return value || "";
+}
+
+function tideZoneLabel(value) {
+  return ({
+    early: "序盤", mid: "中盤", late: "終盤",
+    low_tide: "干潮帯", high_tide: "満潮帯", normal: "通常",
+  })[String(value || "").toLowerCase()] || value || "";
+}
+
+function existingWakamatsuTideJudgment(tideZone = {}, raceContext = {}) {
+  const legacy = [tideZone.nearest, tideZone.phase, tideZone.zone, tideZone.bucket || tideZone.band]
+    .filter((value) => value !== undefined && value !== null && value !== "");
+  if (legacy.length) return legacy.join(" / ");
+  const current = [
+    raceContext.tide_type,
+    tidePhaseLabel(raceContext.tide_phase || raceContext.tidePhase),
+    tideZoneLabel(raceContext.tide_zone || raceContext.tideZone),
+    raceContext.time_band || raceContext.timeBand,
+  ].filter((value) => value !== undefined && value !== null && value !== "");
+  return current.length ? current.join(" / ") : "取得不可";
+}
+
+function wakamatsuDeadlineTideInfo(deadline, events, tideZone = {}, raceContext = {}) {
+  const target = tideMinutes(deadline);
+  if (target === null || !Array.isArray(events) || events.length < 2) return { available: false };
+  const points = events.map((event) => ({
+    type: event?.type,
+    time: event?.time,
+    minute: tideMinutes(event?.time),
+    level: event?.level === undefined || event?.level === null || event?.level === "" ? NaN : Number(event.level),
+  }));
+  if (points.some((point) => !["満潮", "干潮"].includes(point.type)
+    || point.minute === null || !Number.isFinite(point.level))) return { available: false };
+  points.sort((a, b) => a.minute - b.minute);
+  if (points.some((point, index) => index > 0 && point.minute <= points[index - 1].minute)) return { available: false };
+  if (target < points[0].minute || target > points.at(-1).minute) return { available: false };
+
+  const previous = [...points].reverse().find((point) => point.minute <= target);
+  const next = points.find((point) => point.minute >= target);
+  if (!previous || !next) return { available: false };
+  const span = next.minute - previous.minute;
+  const level = span === 0
+    ? previous.level
+    : previous.level + (next.level - previous.level) * ((target - previous.minute) / span);
+  const nearest = points.reduce((best, point) => (
+    Math.abs(point.minute - target) < Math.abs(best.minute - target) ? point : best
+  ));
+  const difference = target - nearest.minute;
+  const differenceText = difference === 0
+    ? `${nearest.type} ${nearest.time}（同時刻）`
+    : `${nearest.type} ${nearest.time}${difference > 0 ? "から" : "まで"}${Math.abs(difference)}分`;
+
+  return {
+    available: true,
+    level: Math.round(level * 10) / 10,
+    phase: previous.type === "満潮" ? "下げ潮" : "上げ潮",
+    differenceText,
+    judgment: existingWakamatsuTideJudgment(tideZone, raceContext),
+  };
+}
+
+function renderWakamatsuDeadlineTide(raceData, events, tideZone, raceContext) {
+  const deadline = raceData?.deadline || "";
+  const info = wakamatsuDeadlineTideInfo(deadline, events, tideZone, raceContext);
+  const unavailable = "取得不可";
+  return `<section class="tide-race-info" aria-label="${esc(raceData?.race || currentRaceNo)}R締切予定時刻の潮情報">
+    <h3>${esc(raceData?.race || currentRaceNo)}R 締切時の潮情報</h3>
+    <div class="tide-race-grid">
+      <div class="tide-race-stat"><span>締切予定時刻</span><b>${deadline ? esc(deadline) : unavailable}</b></div>
+      <div class="tide-race-stat"><span>推定潮位</span><b>${info.available ? `${esc(info.level)}cm` : unavailable}</b>${info.available ? `<small>時刻の線形補間による推定値</small>` : ""}</div>
+      <div class="tide-race-stat"><span>潮流</span><b>${info.available ? esc(info.phase) : unavailable}</b></div>
+      <div class="tide-race-stat"><span>満潮・干潮との時間差</span><b>${info.available ? esc(info.differenceText) : unavailable}</b></div>
+      <div class="tide-race-stat wide"><span>既存ロジックによる潮判定</span><b>${info.available ? esc(info.judgment) : unavailable}</b></div>
+    </div>
+  </section>`;
+}
+
 function tideSvg(events) {
   if (!events?.length) return `<div class="note">潮見表データが未取得です。</div>`;
   const th = (t) => { const [h, m] = String(t).split(":").map(Number); return h + m / 60; };
@@ -1839,7 +1929,8 @@ function renderTide() {
   return `<div class="card"><h2>${currentPayload.venue || ""} 潮見表</h2>
     <div class="tide-type">${safe(t.tideType)}</div>
     <div class="note">${safe(t.date, "")} / ${safe(t.source, "")}<br>${safe(t.summary, "")}</div>
-    <div class="attack">このレースの潮判定：${safe(z.nearest)} / ${safe(z.phase || z.zone)} / ${safe(z.bucket || z.band)}</div>
+    ${currentVenueSlug === "wakamatsu" ? renderWakamatsuDeadlineTide(race(), events, z, p.raceContext || {}) : ""}
+    ${currentVenueSlug === "wakamatsu" ? "" : `<div class="attack">このレースの潮判定：${safe(z.nearest)} / ${safe(z.phase || z.zone)} / ${safe(z.bucket || z.band)}</div>`}
     ${tideSvg(events)}
     <table><tr><th>種別</th><th>時刻</th><th>潮位</th></tr>${events.map((x) => `<tr><td>${safe(x.type)}</td><td>${safe(x.time)}</td><td>${safe(x.level)}cm</td></tr>`).join("")}</table>
   </div>`;
