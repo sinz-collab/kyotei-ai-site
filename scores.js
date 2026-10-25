@@ -35,9 +35,12 @@ function scoresResultTime(result) {
     result?.updated_at, result?.updatedAt].map(scoresTime).find(Number.isFinite);
 }
 
-function scoresFinal(raceData, legacy, result) {
+function scoresFinal(raceData, legacy, result, venueSlug) {
   const history = raceData?.prediction_history || legacy?.prediction_history || raceData?.prediction?.prediction_history;
-  const finalHistory = Array.isArray(history?.final) ? history.final : [];
+  const finalHistory = [
+    ...(Array.isArray(history?.final) ? history.final : []),
+    ...(venueSlug === 'ashiya' && Array.isArray(history?.live) ? history.live : []),
+  ];
   const resultTime = scoresResultTime(result);
   const eligibleHistory = Number.isFinite(resultTime)
     ? finalHistory.filter((item) => {
@@ -45,7 +48,11 @@ function scoresFinal(raceData, legacy, result) {
       return !Number.isFinite(itemTime) || itemTime <= resultTime;
     })
     : finalHistory;
-  const snapshot = eligibleHistory.at(-1);
+  const snapshot = eligibleHistory.sort((left, right) => {
+    const leftTime = scoresItemTime(left);
+    const rightTime = scoresItemTime(right);
+    return (Number.isFinite(leftTime) ? leftTime : 0) - (Number.isFinite(rightTime) ? rightTime : 0);
+  }).at(-1);
   if (snapshot) return snapshot.prediction || snapshot;
   const candidates = [raceData?.predictionFinal, legacy, raceData?.prediction];
   return candidates.find((p) => (!Number.isFinite(resultTime) || !Number.isFinite(scoresItemTime(p)) || scoresItemTime(p) <= resultTime)
@@ -58,17 +65,19 @@ function scoresFinal(raceData, legacy, result) {
 function scoresNormalTickets(p, venueSlug) {
   if (!p) return [];
   const tickets = p.tickets;
-  return [p.ai, p.balance, venueSlug === 'biwako' ? null : p.aiUpset, Array.isArray(tickets) ? tickets : null,
+  return [p.normalTickets, p.ai, p.balance, venueSlug === 'biwako' ? null : p.aiUpset, Array.isArray(tickets) ? tickets : null,
     tickets?.main, tickets?.deviation, tickets?.upset, tickets?.insurance]
     .flatMap((rows) => Array.isArray(rows) ? rows : []);
 }
 
 function scoresFlyTickets(p, venueSlug) {
-  return scoresFlyVenue(venueSlug) && Array.isArray(p?.flyPrediction?.tickets) ? p.flyPrediction.tickets : [];
+  if (!scoresFlyVenue(venueSlug)) return [];
+  if (Array.isArray(p?.flyPrediction?.tickets)) return p.flyPrediction.tickets;
+  return Array.isArray(p?.flyTickets) ? p.flyTickets : [];
 }
 
 function scoresFlyRate(p) {
-  const raw = p?.lane1FlyProbability ?? p?.flyPrediction?.probability;
+  const raw = p?.lane1FlyProbability ?? p?.flyPrediction?.probability ?? p?.probabilities?.lane1Fly;
   if (raw === undefined || raw === null || raw === '') return null;
   const value = Number(String(raw).replace(/[％%\s]/g, ''));
   return Number.isFinite(value) && value >= 0 && value <= 100 ? value : null;
@@ -86,7 +95,7 @@ function scoresRow(raceNo, raceData, legacy, result, venueSlug) {
   const payoutText = String(result?.payout3t ?? '').replace(/[¥￥円,\s]/g, '');
   const payout = /^\d+$/.test(payoutText) ? Number(payoutText) : null;
   const dedicatedFlyVenue = scoresFlyVenue(venueSlug);
-  const final = scoresFinal(raceData, legacy, result);
+  const final = scoresFinal(raceData, legacy, result, venueSlug);
   const ticketHit = (tickets) => tickets.some((ticket) => scoresCombo(typeof ticket === 'string' ? ticket : ticket?.combo || ticket?.combination || ticket?.ticket || ticket?.bet) === order);
   const normalHit = confirmed && ticketHit(scoresNormalTickets(final, venueSlug));
   const flyHit = confirmed && ticketHit(scoresFlyTickets(final, venueSlug));
@@ -139,11 +148,16 @@ function scoresHitLabel(row) {
 async function loadScoresVenue(venue, date) {
   let payload = null;
   let failed = false;
-  try {
-    if (!venue.dataPath) throw new Error('no public payload');
-    payload = await fetchJson(venue.dataPath);
-    if (payload.date !== date) throw new Error('wrong date');
-  } catch (_) { payload = null; failed = true; }
+  const payloadPaths = [...new Set([venue.dataPath, venue.latestPath].filter(Boolean))];
+  for (const path of payloadPaths) {
+    try {
+      const candidate = await fetchJson(path);
+      if (candidate.date !== date) throw new Error('wrong date');
+      payload = candidate;
+      break;
+    } catch (_) { /* Try the venue's latest public snapshot next. */ }
+  }
+  if (!payload) failed = true;
   const rows = [];
   // Limit concurrent requests while reusing the existing LIVE result documents.
   for (let first = 1; first <= 12; first += 4) {
