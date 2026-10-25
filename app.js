@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261023-wakamatsu-live-1m";
+const SITE_BUILD = "20261025-ashiya-live-wakamatsu-tide";
 
 let manifest = null;
 let currentPayload = null;
@@ -603,7 +603,7 @@ async function loadLiveRace() {
   }
   // Venue-specific final predictions must come from their server-side engines.
   // Keep this legacy browser review available to other venues only.
-  if (currentPredictionAvailable && !["tokoname", "toda", "wakamatsu", "shimonoseki", "fukuoka", "karatsu"].includes(currentVenueSlug)) {
+  if (currentPredictionAvailable && !["tokoname", "toda", "ashiya", "wakamatsu", "shimonoseki", "fukuoka", "karatsu"].includes(currentVenueSlug)) {
     applyLivePredictionReview(prediction, { direct, exhibition, original_exhibition: original, odds });
   }
   if (validLiveDocument(result, "result")) {
@@ -635,7 +635,7 @@ function hasCompletedFinalPrediction(raceData) {
 }
 
 async function refreshWakamatsuVenuePayload() {
-  if (!["wakamatsu", "fukuoka"].includes(currentVenueSlug) || !currentPayload) return false;
+  if (!["ashiya", "wakamatsu", "fukuoka"].includes(currentVenueSlug) || !currentPayload) return false;
 
   const venueSlug = currentVenueSlug;
   const payloadDate = currentPayload.date;
@@ -647,7 +647,7 @@ async function refreshWakamatsuVenuePayload() {
   const complete = races.length === 12 && races.every((raceData) =>
     Array.isArray(raceData.racers) && raceData.racers.length === 6
   );
-  const hasFinal = races.some(hasCompletedFinalPrediction);
+  const hasFinal = venueSlug === "ashiya" || races.some(hasCompletedFinalPrediction);
 
   // Do not let a response from an old venue/date replace a view opened while fetching.
   if (
@@ -694,14 +694,14 @@ async function refreshSiteBuildIfStale() {
 function startLiveRefresh() {
   if (liveRefreshTimer) clearInterval(liveRefreshTimer);
   let refreshInFlight = false;
-  const refreshInterval = ["fukuoka", "wakamatsu"].includes(currentVenueSlug)
+  const refreshInterval = ["ashiya", "fukuoka", "wakamatsu"].includes(currentVenueSlug)
     ? 60 * 1000
     : 4 * 60 * 1000;
   liveRefreshTimer = setInterval(async () => {
     if (document.hidden || !currentVenueSlug || !currentPayload || refreshInFlight) return;
     refreshInFlight = true;
     try {
-      if (currentVenueSlug === "wakamatsu" && await refreshSiteBuildIfStale()) return;
+      if (["ashiya", "wakamatsu"].includes(currentVenueSlug) && await refreshSiteBuildIfStale()) return;
       await refreshWakamatsuVenuePayload();
       await loadLiveRace();
       renderPane();
@@ -2444,7 +2444,7 @@ document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => showV
 document.querySelectorAll(".subnav button").forEach((b) => b.onclick = () => switchPane(b.dataset.pane));
 $("backTop").onclick = () => showView("top");
 document.addEventListener?.("visibilitychange", () => {
-  if (!document.hidden && currentVenueSlug === "wakamatsu") refreshSiteBuildIfStale();
+  if (!document.hidden && ["ashiya", "wakamatsu"].includes(currentVenueSlug)) refreshSiteBuildIfStale();
 });
 
 init();
