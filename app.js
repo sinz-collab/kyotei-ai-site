@@ -623,19 +623,22 @@ async function loadLiveRace() {
 function hasCompletedFinalPrediction(raceData) {
   const finalPrediction = raceData?.predictionFinal;
   return Boolean(
-    finalPrediction
-    && (
-      finalPrediction.status === "complete"
-      || (
-        finalPrediction.phase === "final"
-        && finalPrediction.finalPredictionStatus === "complete"
+    (
+      finalPrediction
+      && (
+        finalPrediction.status === "complete"
+        || (
+          finalPrediction.phase === "final"
+          && finalPrediction.finalPredictionStatus === "complete"
+        )
       )
     )
+    || isVerifiedTokonameFinalPrediction(raceData?.prediction)
   );
 }
 
 async function refreshWakamatsuVenuePayload() {
-  if (!["ashiya", "wakamatsu", "fukuoka"].includes(currentVenueSlug) || !currentPayload) return false;
+  if (!["ashiya", "wakamatsu", "fukuoka", "tokoname"].includes(currentVenueSlug) || !currentPayload) return false;
 
   const venueSlug = currentVenueSlug;
   const payloadDate = currentPayload.date;
@@ -694,14 +697,14 @@ async function refreshSiteBuildIfStale() {
 function startLiveRefresh() {
   if (liveRefreshTimer) clearInterval(liveRefreshTimer);
   let refreshInFlight = false;
-  const refreshInterval = ["ashiya", "fukuoka", "wakamatsu"].includes(currentVenueSlug)
+  const refreshInterval = ["ashiya", "fukuoka", "tokoname", "wakamatsu"].includes(currentVenueSlug)
     ? 60 * 1000
     : 4 * 60 * 1000;
   liveRefreshTimer = setInterval(async () => {
     if (document.hidden || !currentVenueSlug || !currentPayload || refreshInFlight) return;
     refreshInFlight = true;
     try {
-      if (["ashiya", "wakamatsu"].includes(currentVenueSlug) && await refreshSiteBuildIfStale()) return;
+      if (["ashiya", "tokoname", "wakamatsu"].includes(currentVenueSlug) && await refreshSiteBuildIfStale()) return;
       await refreshWakamatsuVenuePayload();
       await loadLiveRace();
       renderPane();
