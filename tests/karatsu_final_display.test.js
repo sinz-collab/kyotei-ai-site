@@ -49,6 +49,17 @@ globalThis.predForTest = pred;
 globalThis.renderPredictionForTest = renderPrediction;
 globalThis.renderRealtimeForTest = renderRealtime;`, context);
 
+assert.match(
+  appSource,
+  /\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu"\]\.includes\(currentVenueSlug\)/,
+  "Karatsu must reload its server-generated final prediction payload",
+);
+assert.match(
+  appSource,
+  /\["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu"\]\.includes\(currentVenueSlug\)/,
+  "Karatsu must refresh live payloads every minute",
+);
+
 const probabilities = (offset = 0) => Object.fromEntries(
   [1,2,3,4,5,6].map((lane) => [String(lane), 10 + lane + offset]),
 );
@@ -172,5 +183,17 @@ const tokonameFinalHtml = context.renderPredictionForTest();
 assert.match(tokonameFinalHtml, /本予想/);
 assert.match(tokonameFinalHtml, /再計算済みの本予想です/);
 assert.doesNotMatch(tokonameFinalHtml, /現在は前データでの仮予想です/);
+
+if (process.env.KARATSU_PAYLOAD) {
+  const publishedPayload = JSON.parse(fs.readFileSync(process.env.KARATSU_PAYLOAD, "utf8"));
+  for (const raceData of publishedPayload.races.filter((item) => item.predictionFinal)) {
+    context.setDisplayState("karatsu", publishedPayload, raceData.race);
+    const publishedPrediction = context.predForTest();
+    assert.equal(publishedPrediction.phase, "final");
+    assert.equal(publishedPrediction.finalPredictionStatus, "complete");
+    assert.match(context.renderPredictionForTest(), /本予想/);
+    assert.doesNotMatch(context.renderPredictionForTest(), /現在は前データでの仮予想です/);
+  }
+}
 
 console.log("Karatsu final display tests passed");

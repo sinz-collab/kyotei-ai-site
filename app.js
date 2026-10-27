@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261025-ashiya-scores-recovery";
+const SITE_BUILD = "20261027-karatsu-live-final";
 
 let manifest = null;
 let currentPayload = null;
@@ -638,7 +638,7 @@ function hasCompletedFinalPrediction(raceData) {
 }
 
 async function refreshWakamatsuVenuePayload() {
-  if (!["ashiya", "wakamatsu", "fukuoka", "tokoname"].includes(currentVenueSlug) || !currentPayload) return false;
+  if (!["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu"].includes(currentVenueSlug) || !currentPayload) return false;
 
   const venueSlug = currentVenueSlug;
   const payloadDate = currentPayload.date;
@@ -697,14 +697,14 @@ async function refreshSiteBuildIfStale() {
 function startLiveRefresh() {
   if (liveRefreshTimer) clearInterval(liveRefreshTimer);
   let refreshInFlight = false;
-  const refreshInterval = ["ashiya", "fukuoka", "tokoname", "wakamatsu"].includes(currentVenueSlug)
+  const refreshInterval = ["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu"].includes(currentVenueSlug)
     ? 60 * 1000
     : 4 * 60 * 1000;
   liveRefreshTimer = setInterval(async () => {
     if (document.hidden || !currentVenueSlug || !currentPayload || refreshInFlight) return;
     refreshInFlight = true;
     try {
-      if (["ashiya", "tokoname", "wakamatsu"].includes(currentVenueSlug) && await refreshSiteBuildIfStale()) return;
+      if (["ashiya", "tokoname", "wakamatsu", "karatsu"].includes(currentVenueSlug) && await refreshSiteBuildIfStale()) return;
       await refreshWakamatsuVenuePayload();
       await loadLiveRace();
       renderPane();
