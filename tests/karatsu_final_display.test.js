@@ -94,7 +94,16 @@ const races = [1,2,3,4,5,6].map((race) => ({
   prediction: { probabilities: { win: probabilities(), second: probabilities(1), third: probabilities(2) } },
   ...(race <= 5 ? {
     predictionFinal: {
+      engine: "karatsu_scenario_engine_v1_2",
       status: "complete",
+      phase: "final",
+      finalPredictionStatus: "complete",
+      probabilityReviewStatus: "reviewed",
+      probabilityFlow: { realtimeApplied: true, reviewed: true },
+      liveInput: {
+        complete: true,
+        required: ["direct", "exhibition", "original_exhibition"],
+      },
       win: probabilities(5),
       second: probabilities(6),
       third: probabilities(7),
@@ -133,7 +142,7 @@ for (let raceNo = 1; raceNo <= 5; raceNo += 1) {
 
 context.setDisplayState("karatsu", payload, 6);
 assert.match(context.renderPredictionForTest(), /現在は前データでの仮予想です/);
-assert.match(context.renderPredictionForTest(), /修正前 -/);
+assert.match(context.renderPredictionForTest(), /修正前対象外/);
 
 context.setDisplayState("heiwajima", payload, 1);
 const otherVenuePrediction = context.predForTest();
@@ -181,8 +190,16 @@ const tokonameFinal = {
 context.setDisplayState("tokoname", tokonameFinal, 11);
 const tokonameFinalHtml = context.renderPredictionForTest();
 assert.match(tokonameFinalHtml, /本予想/);
-assert.match(tokonameFinalHtml, /再計算済みの本予想です/);
+assert.match(tokonameFinalHtml, /再精査は成功しています/);
+assert.match(tokonameFinalHtml, /修正前データなし/);
 assert.doesNotMatch(tokonameFinalHtml, /現在は前データでの仮予想です/);
+
+const unverifiedKaratsuFinal = structuredClone(payload);
+unverifiedKaratsuFinal.races[0].predictionFinal.liveInput.complete = false;
+context.setDisplayState("karatsu", unverifiedKaratsuFinal, 1);
+const unverifiedHtml = context.renderPredictionForTest();
+assert.match(unverifiedHtml, /現在は前データでの仮予想です/);
+assert.doesNotMatch(unverifiedHtml, /再精査は成功しています|再精査済みの本予想/);
 
 if (process.env.KARATSU_PAYLOAD) {
   const publishedPayload = JSON.parse(fs.readFileSync(process.env.KARATSU_PAYLOAD, "utf8"));

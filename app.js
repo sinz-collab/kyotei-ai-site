@@ -451,6 +451,34 @@ function isVerifiedTokonameFinalPrediction(prediction) {
     && prediction?.data_flags?.odds_used_for_probability === false;
 }
 
+function isVerifiedKaratsuFinalPrediction(prediction) {
+  const required = new Set(Array.isArray(prediction?.liveInput?.required)
+    ? prediction.liveInput.required
+    : []);
+  return prediction?.engine === "karatsu_scenario_engine_v1_2"
+    && prediction?.phase === "final"
+    && prediction?.status === "complete"
+    && prediction?.finalPredictionStatus === "complete"
+    && prediction?.probabilityReviewStatus === "reviewed"
+    && prediction?.probabilityFlow?.realtimeApplied === true
+    && prediction?.probabilityFlow?.reviewed === true
+    && prediction?.liveInput?.complete === true
+    && ["direct", "exhibition", "original_exhibition"]
+      .every((name) => required.has(name));
+}
+
+function hasCompleteProbabilityReview(prediction) {
+  if (prediction?.probabilityReviewStatus !== "reviewed") return false;
+  return [1,2,3,4,5,6].every((laneNo) => {
+    const review = prediction.probabilityReview?.[laneNo]
+      || prediction.probabilityReview?.[String(laneNo)];
+    return review && [
+      "morningWin", "morningSecond", "morningThird",
+      "win", "second", "third",
+    ].every((key) => Number.isFinite(num(review[key], NaN)));
+  });
+}
+
 function normalizedExhibitionTime(value) {
   if (value === undefined || value === null || value === "" || value === "-") return null;
   const parsed = Number(String(value).trim());
@@ -2014,24 +2042,33 @@ function renderPrediction() {
   const upsetModeLabel = usesFlyTicketTabs
     ? `1号艇飛び買い目<span>${isWakamatsuFly ? wakamatsuFlyTickets.length : dedicatedFlyTickets.length}点</span>`
     : (isBiwakoTickets ? `1号艇飛び予想<span>${(p.aiUpset || []).length}点</span>` : "AI荒れ予想");
-  const showDeltas = p.probabilityReviewStatus === "reviewed";
   const flow = p.probabilityFlow || {};
   const isFinalStage = currentVenueSlug === "tokoname"
     ? isVerifiedTokonameFinalPrediction(p)
-    : (
+    : (currentVenueSlug === "karatsu"
+      ? isVerifiedKaratsuFinalPrediction(p)
+      : (
       p.predictionStage === "final" ||
       s.label === "本予想" ||
       s.badge === "本予想" ||
       flow.reviewed ||
-      showDeltas
-    );
+      p.probabilityReviewStatus === "reviewed"
+    ));
+  const liveReviewSucceeded = currentVenueSlug === "tokoname"
+    ? isVerifiedTokonameFinalPrediction(p)
+    : (currentVenueSlug === "karatsu"
+      ? isVerifiedKaratsuFinalPrediction(p)
+      : isFinalStage);
+  const showDeltas = liveReviewSucceeded && hasCompleteProbabilityReview(p);
   const lane1FlyStageLabel = currentPayload?.venueId === "wakamatsu"
     ? (isFinalStage ? "LIVE" : "朝")
     : "";
 
   const stageLabel = isFinalStage ? "本予想" : "仮予想";
   const stageStatus = isFinalStage
-    ? (s.statusText || "展示・スリット・直前情報を反映して再精査済み")
+    ? (liveReviewSucceeded
+      ? (s.statusText || "展示・スリット・直前情報を反映して再精査済み")
+      : "本予想データを表示中（再精査成功情報は未確認）")
     : (s.statusText || "前データでのエンジン予想。直前・展示取得後に本予想へ更新");
   const stageColor = isFinalStage ? "green" : "yellow";
   const delta = (review, key) => {
@@ -2046,7 +2083,8 @@ function renderPrediction() {
     if (showDeltas) {
       return `<b>${pct1(adjustedValue)}${delta(review, deltaKey)}</b><span class="adjusted-prob">修正前 ${pct1(baseValue)}</span>`;
     }
-    return `<b>${pct1(baseValue)}</b><span class="adjusted-prob pending">修正前 -</span>`;
+    const comparisonLabel = isFinalStage ? "修正前データなし" : "修正前対象外";
+    return `<b>${pct1(baseValue)}</b><span class="adjusted-prob pending">${comparisonLabel}</span>`;
   };
   const hasTop3Probabilities = p.top3 && Object.keys(p.top3).length === 6;
   const probRows = [1,2,3,4,5,6].map((n) => {
@@ -2066,9 +2104,11 @@ function renderPrediction() {
   </div>`;
   const reviewNote = showDeltas
     ? `<div class="note">上段は展示・スリット・直前情報を反映して再精査した修正後、下段は修正前の前データです。</div>`
-    : (isFinalStage
-      ? `<div class="note">展示・スリット・直前情報を反映して再計算済みの本予想です。</div>`
-      : `<div class="note">現在は前データでの仮予想です。展示・スリット・直前情報が入り、再精査済みになると上段に修正後、下段に修正前を表示します。</div>`);
+    : (liveReviewSucceeded
+      ? `<div class="note">展示・スリット・直前情報の再精査は成功しています。修正前の比較データは未収録です。</div>`
+      : (isFinalStage
+        ? `<div class="note">本予想データを表示中です。再精査成功情報は確認できていません。</div>`
+        : `<div class="note">現在は前データでの仮予想です。展示・スリット・直前情報が入り、再精査済みになると上段に修正後、下段に修正前を表示します。</div>`));
   const lane1FlyProbabilityValue = currentPayload?.venueId === "ashiya"
     ? pct1(lane1FlyProbability)
     : lane1FlyProbabilityText(lane1FlyProbability);
