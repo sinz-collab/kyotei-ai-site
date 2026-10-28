@@ -187,6 +187,28 @@ const tokonameFinal = {
       probabilities: {
         win: probabilities(), second: probabilities(1), third: probabilities(2),
       },
+      probabilityReviewStatus: "reviewed",
+      probabilityFlow: {
+        baseApplied: true,
+        realtimeApplied: true,
+        reviewed: true,
+      },
+      probabilityReview: Object.fromEntries([1,2,3,4,5,6].map((lane) => {
+        const key = String(lane);
+        const morningWin = probabilities(2)[key];
+        const morningSecond = probabilities()[key];
+        const morningThird = probabilities(1)[key];
+        const win = probabilities()[key];
+        const second = probabilities(1)[key];
+        const third = probabilities(2)[key];
+        return [key, {
+          morningWin, morningSecond, morningThird,
+          win, second, third,
+          deltaWin: win - morningWin,
+          deltaSecond: second - morningSecond,
+          deltaThird: third - morningThird,
+        }];
+      })),
       tickets: { main: [], deviation: [], upset: [] },
       sab: { grade: "A" },
     },
@@ -195,8 +217,9 @@ const tokonameFinal = {
 context.setDisplayState("tokoname", tokonameFinal, 11);
 const tokonameFinalHtml = context.renderPredictionForTest();
 assert.match(tokonameFinalHtml, /本予想/);
-assert.match(tokonameFinalHtml, /再精査は成功しています/);
-assert.match(tokonameFinalHtml, /修正前データなし/);
+assert.match(tokonameFinalHtml, /再精査した修正後/);
+assert.match(tokonameFinalHtml, /修正前 27\.0%/);
+assert.doesNotMatch(tokonameFinalHtml, /修正前データなし/);
 assert.doesNotMatch(tokonameFinalHtml, /現在は前データでの仮予想です/);
 
 const unverifiedKaratsuFinal = structuredClone(payload);
