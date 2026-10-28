@@ -6,7 +6,7 @@ const path = require("node:path");
 const appSource = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 assert.match(
   appSource,
-  /currentPredictionAvailable && !\["tokoname", "toda", "ashiya", "wakamatsu", "shimonoseki", "fukuoka", "karatsu"\]\.includes\(currentVenueSlug\)/,
+  /currentPredictionAvailable && !\["tokoname", "toda", "ashiya", "wakamatsu", "shimonoseki", "fukuoka", "karatsu", "naruto"\]\.includes\(currentVenueSlug\)/,
   "Venue-specific server engines must not use the browser-side live prediction review",
 );
 assert.match(

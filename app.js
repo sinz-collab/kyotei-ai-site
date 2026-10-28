@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261027-karatsu-live-final";
+const SITE_BUILD = "20261028-naruto-integration";
 
 let manifest = null;
 let currentPayload = null;
@@ -24,7 +24,12 @@ let liveRefreshTimer = null;
 const betBuilderStates = new Map();
 
 const $ = (id) => document.getElementById(id);
-const safe = (v, fallback = "-") => (v === undefined || v === null || v === "" ? fallback : v);
+const missingMark = () => currentVenueSlug === "naruto" ? "—" : "-";
+const safe = (v, fallback) => (
+  v === undefined || v === null || v === ""
+    ? (fallback === undefined ? missingMark() : fallback)
+    : v
+);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const firstValue = (...values) => values.find((v) => v !== undefined && v !== null && v !== "");
 const yen = (v) => safe(v);
@@ -603,7 +608,7 @@ async function loadLiveRace() {
   }
   // Venue-specific final predictions must come from their server-side engines.
   // Keep this legacy browser review available to other venues only.
-  if (currentPredictionAvailable && !["tokoname", "toda", "ashiya", "wakamatsu", "shimonoseki", "fukuoka", "karatsu"].includes(currentVenueSlug)) {
+  if (currentPredictionAvailable && !["tokoname", "toda", "ashiya", "wakamatsu", "shimonoseki", "fukuoka", "karatsu", "naruto"].includes(currentVenueSlug)) {
     applyLivePredictionReview(prediction, { direct, exhibition, original_exhibition: original, odds });
   }
   if (validLiveDocument(result, "result")) {
