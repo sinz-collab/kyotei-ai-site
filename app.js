@@ -469,13 +469,22 @@ function isVerifiedKaratsuFinalPrediction(prediction) {
 
 function hasCompleteProbabilityReview(prediction) {
   if (prediction?.probabilityReviewStatus !== "reviewed") return false;
-  return [1,2,3,4,5,6].every((laneNo) => {
-    const review = prediction.probabilityReview?.[laneNo]
-      || prediction.probabilityReview?.[String(laneNo)];
+  const rows = [1,2,3,4,5,6].map((laneNo) => (
+    prediction.probabilityReview?.[laneNo]
+      || prediction.probabilityReview?.[String(laneNo)]
+  ));
+  const complete = rows.every((review) => {
     return review && [
       "morningWin", "morningSecond", "morningThird",
       "win", "second", "third",
     ].every((key) => Number.isFinite(num(review[key], NaN)));
+  });
+  if (!complete) return false;
+  return ["Win", "Second", "Third"].every((suffix) => {
+    const before = rows.reduce((sum, review) => sum + num(review[`morning${suffix}`], 0), 0);
+    const afterKey = suffix.toLowerCase();
+    const after = rows.reduce((sum, review) => sum + num(review[afterKey], 0), 0);
+    return before >= 99 && before <= 101 && after >= 99 && after <= 101;
   });
 }
 

@@ -60,9 +60,14 @@ assert.match(
   "Karatsu must refresh live payloads every minute",
 );
 
-const probabilities = (offset = 0) => Object.fromEntries(
-  [1,2,3,4,5,6].map((lane) => [String(lane), 10 + lane + offset]),
-);
+const probabilities = (offset = 0) => ({
+  "1": 25 + offset,
+  "2": 20 - offset,
+  "3": 18,
+  "4": 15,
+  "5": 12,
+  "6": 10,
+});
 const live = {
   exhibition: {
     entries: [1,2,3,4,5,6].map((lane) => ({
@@ -131,7 +136,7 @@ for (let raceNo = 1; raceNo <= 5; raceNo += 1) {
   assert.equal(prediction.probabilityReviewStatus, "reviewed");
   assert.equal(prediction.probabilityReview["1"].deltaWin, 5);
   assert.match(predictionHtml, /本予想/);
-  assert.match(predictionHtml, /修正前 11\.0%/);
+  assert.match(predictionHtml, /修正前 25\.0%/);
   assert.match(predictionHtml, /\+5\.0/);
   assert.doesNotMatch(predictionHtml, /現在は前データでの仮予想です/);
   assert.match(realtimeHtml, /6\.71/);
