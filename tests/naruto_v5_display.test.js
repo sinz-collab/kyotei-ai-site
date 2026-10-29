@@ -9,6 +9,8 @@ assert.match(app, /const isNarutoFly = currentPayload\?\.venueId === "naruto"/);
 assert.match(app, /String\(p\.flyPrediction\?\.modelVersion \|\| ""\)\.startsWith\("naruto_"\)/);
 assert.match(app, /\["wakamatsu", "naruto"\]\.includes\(currentPayload\?\.venueId\)/);
 assert.match(app, /currentVenueSlug === "naruto"[\s\S]*p\.predictionStage === "live"/);
+assert.match(app, /const narutoFlyProbabilityText = \(v\) =>/);
+assert.match(app, /value\.toFixed\(2\)/);
 assert.match(app, /isDedicatedFlyVenue = .*\|\| isNarutoFly/);
 assert.match(scores, /'biwako', 'naruto'/);
 assert.match(scores, /\['ashiya', 'naruto'\]\.includes\(venueSlug\).*history\?\.live/);

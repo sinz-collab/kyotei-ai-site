@@ -10,6 +10,8 @@ assert.match(app, /isFinalStage \? "LIVE" : "朝"/);
 assert.match(app, /1号艇飛び確率\$\{lane1FlyStageLabel/);
 assert.doesNotMatch(app, /ashiyaFlyProbabilityCard|ashiya-comparison/);
 assert.match(app, /currentPayload\?\.venueId === "ashiya"\s*\? pct1\(lane1FlyProbability\)/);
+assert.match(app, /currentPayload\?\.venueId === "naruto"\s*\? narutoFlyProbabilityText\(lane1FlyProbability\)/);
+assert.match(app, /Number\.isFinite\(value\) \? `\$\{value\.toFixed\(2\)\}%` : "—"/);
 assert.match(app, /const flyProbabilityCard = `<div class="probcard lane1-fly \$\{lane1FlyClass\}"/);
 assert.match(app, /raceData\?\.prediction\?\.lane1FlyProbability/);
 assert.match(app, /if \(v === undefined \|\| v === null \|\| v === ""\) return "—"/);

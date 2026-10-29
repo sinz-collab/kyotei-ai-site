@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261029-naruto-v5";
+const SITE_BUILD = "20261029-naruto-live-final";
 
 let manifest = null;
 let currentPayload = null;
@@ -85,6 +85,12 @@ function dedicatedFlyTicketSets(prediction) {
 const lane1FlyProbabilityText = (v) => {
   if (v === undefined || v === null || v === "") return "—";
   return typeof v === "number" && Number.isFinite(v) ? `${v}%` : esc(v);
+};
+
+const narutoFlyProbabilityText = (v) => {
+  if (v === undefined || v === null || v === "") return "—";
+  const value = Number(v);
+  return Number.isFinite(value) ? `${value.toFixed(2)}%` : "—";
 };
 
 const WIND_DIRECTIONS = [
@@ -2123,9 +2129,11 @@ function renderPrediction() {
       : (isFinalStage
         ? `<div class="note">本予想データを表示中です。再精査成功情報は確認できていません。</div>`
         : `<div class="note">現在は前データでの仮予想です。展示・スリット・直前情報が入り、再精査済みになると上段に修正後、下段に修正前を表示します。</div>`));
-  const lane1FlyProbabilityValue = currentPayload?.venueId === "ashiya"
-    ? pct1(lane1FlyProbability)
-    : lane1FlyProbabilityText(lane1FlyProbability);
+  const lane1FlyProbabilityValue = currentPayload?.venueId === "naruto"
+    ? narutoFlyProbabilityText(lane1FlyProbability)
+    : (currentPayload?.venueId === "ashiya"
+      ? pct1(lane1FlyProbability)
+      : lane1FlyProbabilityText(lane1FlyProbability));
   const flyProbabilityCard = `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率${lane1FlyStageLabel ? ` <small>${lane1FlyStageLabel}</small>` : ""}</span><b>${lane1FlyProbabilityValue}</b>${todaFly ? `<em>${todaFly.isFly ? "飛び優勢" : "逃げ優勢"}</em>` : ""}</div>`;
   const ticketSection = `<div class="card toda-normal-tickets${usesFlyTicketTabs ? " wakamatsu-tickets" : ""}"><h2>買い目</h2>
     <div class="mode ${usesFlyTicketTabs ? "wakamatsu-fly-mode" : ""}"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">${upsetModeLabel}</button></div>
