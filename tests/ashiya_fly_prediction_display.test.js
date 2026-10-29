@@ -11,7 +11,7 @@ assert.match(app, /p\.flyPrediction\?\.modelVersion === "strength_25_frozen"/);
 assert.match(app, /isTodaFly \|\| isFukuokaFly \|\| isAshiyaFly/);
 assert.doesNotMatch(app, /ashiya-comparison|ashiya-fly-values|ashiya-fly-delta|ashiya-fly-note/);
 assert.match(app, /scoresFlyVenue\(currentVenueSlug\)/);
-assert.match(scores, /SCORES_FLY_VENUES = new Set\(\['toda', 'fukuoka', 'ashiya', 'tokoname', 'wakamatsu', 'biwako'\]\)/);
+assert.match(scores, /SCORES_FLY_VENUES = new Set\(\['toda', 'fukuoka', 'ashiya', 'tokoname', 'wakamatsu', 'biwako', 'naruto'\]\)/);
 assert.match(app, /safe\(currentTrifectaOdds\(t\.combo\)\)/);
 assert.match(app, /const lane1FlyProbability = firstValue\(p\.lane1FlyProbability, p\.flyPrediction\?\.probability\)/);
 assert.match(app, /currentPayload\?\.venueId === "ashiya"\s*\? pct1\(lane1FlyProbability\)/);

@@ -5,7 +5,7 @@ const path = require("node:path");
 const app = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 
 assert.match(app, /firstValue\(p\.lane1FlyProbability, p\.flyPrediction\?\.probability\)/);
-assert.match(app, /const lane1FlyStageLabel = currentPayload\?\.venueId === "wakamatsu"/);
+assert.match(app, /const lane1FlyStageLabel = \["wakamatsu", "naruto"\]\.includes\(currentPayload\?\.venueId\)/);
 assert.match(app, /isFinalStage \? "LIVE" : "朝"/);
 assert.match(app, /1号艇飛び確率\$\{lane1FlyStageLabel/);
 assert.doesNotMatch(app, /ashiyaFlyProbabilityCard|ashiya-comparison/);

@@ -10,7 +10,7 @@ assert.match(app, /p\.flyPrediction\?\.modelVersion === "tokoname_fly_tickets_v4
 assert.match(app, /\["waiting", "complete", "unavailable"\]\.includes\(p\.flyPrediction\?\.status\)/);
 assert.match(app, /展示待ちです。通常展示が揃うと1号艇飛び買い目を生成します。/);
 assert.match(app, /scoresFlyVenue\(currentVenueSlug\)/);
-assert.match(scores, /SCORES_FLY_VENUES = new Set\(\['toda', 'fukuoka', 'ashiya', 'tokoname', 'wakamatsu', 'biwako'\]\)/);
+assert.match(scores, /SCORES_FLY_VENUES = new Set\(\['toda', 'fukuoka', 'ashiya', 'tokoname', 'wakamatsu', 'biwako', 'naruto'\]\)/);
 
 const setsStart = app.indexOf('function dedicatedFlyTicketSets');
 const setsEnd = app.indexOf('const lane1FlyProbabilityText', setsStart);

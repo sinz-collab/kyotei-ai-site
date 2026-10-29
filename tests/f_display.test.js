@@ -39,6 +39,6 @@ assert.doesNotMatch(source, /class="compare-f-wrap"/);
 assert.match(styles, /\.f-badge\{[^}]*background:#dc2626[^}]*color:#fff[^}]*white-space:nowrap/);
 assert.match(styles, /\.compare-wrap\{[^}]*overflow-x:auto/);
 assert.match(index, /styles\.css\?v=20261025-wakamatsu-tide-deadline/);
-assert.match(index, /app\.js\?v=20261028-tokoname-karatsu-live-fix/);
+assert.match(index, /app\.js\?v=20261029-naruto-v5/);
 
 console.log("F display tests passed");

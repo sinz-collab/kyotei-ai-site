@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261028-tokoname-karatsu-live-fix";
+const SITE_BUILD = "20261029-naruto-v5";
 
 let manifest = null;
 let currentPayload = null;
@@ -2026,7 +2026,10 @@ function renderPrediction() {
     && p.flyPrediction?.modelVersion === "tokoname_fly_tickets_v4";
   const isWakamatsuFly = currentPayload?.venueId === "wakamatsu"
     && p.flyPrediction?.modelVersion === "wakamatsu_fly_tickets_v1";
-  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly || isTokonameFly;
+  const isNarutoFly = currentPayload?.venueId === "naruto"
+    && ["complete", "unavailable"].includes(p.flyPrediction?.status)
+    && String(p.flyPrediction?.modelVersion || "").startsWith("naruto_");
+  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly || isTokonameFly || isNarutoFly;
   const dedicatedFly = isDedicatedFlyVenue ? p.flyPrediction : null;
   const todaFly = isTodaFly ? dedicatedFly : null;
   const lane1FlyProbability = firstValue(p.lane1FlyProbability, p.flyPrediction?.probability);
@@ -2052,7 +2055,9 @@ function renderPrediction() {
     ? `1号艇飛び買い目<span>${isWakamatsuFly ? wakamatsuFlyTickets.length : dedicatedFlyTickets.length}点</span>`
     : (isBiwakoTickets ? `1号艇飛び予想<span>${(p.aiUpset || []).length}点</span>` : "AI荒れ予想");
   const flow = p.probabilityFlow || {};
-  const isFinalStage = currentVenueSlug === "tokoname"
+  const isFinalStage = currentVenueSlug === "naruto"
+    ? p.predictionStage === "live"
+    : currentVenueSlug === "tokoname"
     ? isVerifiedTokonameFinalPrediction(p)
     : (currentVenueSlug === "karatsu"
       ? isVerifiedKaratsuFinalPrediction(p)
@@ -2069,7 +2074,7 @@ function renderPrediction() {
       ? isVerifiedKaratsuFinalPrediction(p)
       : isFinalStage);
   const showDeltas = liveReviewSucceeded && hasCompleteProbabilityReview(p);
-  const lane1FlyStageLabel = currentPayload?.venueId === "wakamatsu"
+  const lane1FlyStageLabel = ["wakamatsu", "naruto"].includes(currentPayload?.venueId)
     ? (isFinalStage ? "LIVE" : "朝")
     : "";
 
