@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261029-naruto-live-final";
+const SITE_BUILD = "20261030-naruto-live-comparison";
 
 let manifest = null;
 let currentPayload = null;
@@ -471,6 +471,56 @@ function isVerifiedKaratsuFinalPrediction(prediction) {
     && prediction?.liveInput?.complete === true
     && ["direct", "exhibition", "original_exhibition"]
       .every((name) => required.has(name));
+}
+
+function probabilityReviewFromSnapshots(before, after) {
+  const positions = ["win", "second", "third"];
+  const mapsAreComplete = (prediction) => positions.every((position) => {
+    const values = [1,2,3,4,5,6].map((laneNo) => (
+      num(prediction?.[position]?.[String(laneNo)] ?? prediction?.[position]?.[laneNo], NaN)
+    ));
+    const total = values.reduce((sum, value) => sum + value, 0);
+    return values.every(Number.isFinite) && total >= 99 && total <= 101;
+  });
+  if (!mapsAreComplete(before) || !mapsAreComplete(after)) return null;
+  return Object.fromEntries([1,2,3,4,5,6].map((laneNo) => {
+    const key = String(laneNo);
+    const morningWin = num(before.win?.[key] ?? before.win?.[laneNo], 0);
+    const morningSecond = num(before.second?.[key] ?? before.second?.[laneNo], 0);
+    const morningThird = num(before.third?.[key] ?? before.third?.[laneNo], 0);
+    const win = num(after.win?.[key] ?? after.win?.[laneNo], 0);
+    const second = num(after.second?.[key] ?? after.second?.[laneNo], 0);
+    const third = num(after.third?.[key] ?? after.third?.[laneNo], 0);
+    return [key, {
+      morningWin, morningSecond, morningThird, win, second, third,
+      deltaWin: Math.round((win - morningWin) * 10) / 10,
+      deltaSecond: Math.round((second - morningSecond) * 10) / 10,
+      deltaThird: Math.round((third - morningThird) * 10) / 10,
+    }];
+  }));
+}
+
+function isVerifiedNarutoFinalPrediction(prediction) {
+  const liveHistory = prediction?.prediction_history?.live;
+  const liveRecord = Array.isArray(liveHistory) ? liveHistory[liveHistory.length - 1] : null;
+  const livePrediction = liveRecord?.prediction;
+  const input = liveRecord?.input || prediction?.inputSnapshot || {};
+  const entries = Array.isArray(input.liveEntries) ? input.liveEntries : [];
+  const required = ["exhibition_st", "exhibition_course", "lap_time", "turn_time", "straight_time"];
+  const completeInputs = entries.length === 6
+    && new Set(entries.map((row) => Number(row?.lane))).size === 6
+    && entries.every((row) => required.every((key) => Number.isFinite(num(row?.[key], NaN))))
+    && Number.isFinite(num(input.windSpeedMps, NaN))
+    && Number.isFinite(num(input.waveHeightCm, NaN));
+  return prediction?.phase === "final"
+    && prediction?.predictionStage === "live"
+    && prediction?.active_prediction_stage === "live"
+    && String(prediction?.modelVersion || "").startsWith("naruto_v5_live_")
+    && liveRecord?.stage === "live"
+    && livePrediction?.predictionStage === "live"
+    && livePrediction?.modelVersion === prediction.modelVersion
+    && completeInputs
+    && probabilityReviewFromSnapshots(livePrediction, prediction) !== null;
 }
 
 function hasCompleteProbabilityReview(prediction) {
@@ -989,6 +1039,15 @@ function pred() {
       legacy.aiUpset,
       isAshiyaV51 ? "シナリオ穴" : "荒れ"
     );
+    const narutoVerified = currentVenueSlug === "naruto"
+      && isVerifiedNarutoFinalPrediction(legacy);
+    const narutoMorning = raceData?.predictionPre
+      || legacy.prediction_history?.morning?.[0]?.prediction;
+    const narutoLive = legacy.prediction_history?.live?.slice(-1)[0]?.prediction
+      || legacy;
+    const narutoReview = narutoVerified
+      ? probabilityReviewFromSnapshots(narutoMorning, narutoLive)
+      : null;
 
     return {
       ...legacy,
@@ -1004,7 +1063,20 @@ function pred() {
         ...mainTickets,
         ...deviationTickets
       ],
-      aiUpset: upsetTickets
+      aiUpset: upsetTickets,
+      probabilityReview: legacy.probabilityReview || narutoReview || undefined,
+      probabilityReviewStatus: legacy.probabilityReviewStatus
+        || (narutoReview ? "reviewed" : undefined),
+      probabilityFlow: legacy.probabilityFlow || (narutoVerified ? {
+        required: true,
+        baseApplied: Boolean(narutoReview),
+        baseLabel: "直前前エンジン予想",
+        realtimeApplied: true,
+        realtimeLabel: "展示・スリット・直前反映",
+        reviewed: Boolean(narutoReview),
+        reviewLabel: "再精査後の調整数字",
+        adjustedRequired: true,
+      } : undefined),
     };
   }
 
@@ -2078,7 +2150,9 @@ function renderPrediction() {
     ? isVerifiedTokonameFinalPrediction(p)
     : (currentVenueSlug === "karatsu"
       ? isVerifiedKaratsuFinalPrediction(p)
-      : isFinalStage);
+      : (currentVenueSlug === "naruto"
+        ? isVerifiedNarutoFinalPrediction(p)
+        : isFinalStage));
   const showDeltas = liveReviewSucceeded && hasCompleteProbabilityReview(p);
   const lane1FlyStageLabel = ["wakamatsu", "naruto"].includes(currentPayload?.venueId)
     ? (isFinalStage ? "LIVE" : "朝")
