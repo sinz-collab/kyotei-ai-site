@@ -97,7 +97,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 .coursebox{margin-top:8px;padding:9px 10px;border-radius:12px;background:#f8fafc;border:1px solid var(--line);font-size:12px;line-height:1.5}
 .coursebox b{font-size:14px}.coursebox .good{color:#0f766e}.coursebox .bad{color:#dc2626}.coursebox .normal{color:#475569}
 .compare-wrap{overflow-x:auto;margin-top:8px;border:1px solid var(--line);border-radius:14px;background:#fff}
-.compare-table{min-width:980px;border-collapse:separate;border-spacing:0}
+.compare-table{min-width:1220px;border-collapse:separate;border-spacing:0}
 .compare-table th,.compare-table td{padding:8px 6px;border-bottom:1px solid #edf2f7;border-right:1px solid #edf2f7;vertical-align:middle}
 .compare-f-cell .f-badge{margin-left:0}
 .compare-table th:first-child,.compare-table td:first-child{position:sticky;left:0;background:#fff;z-index:2;text-align:left;min-width:112px}
@@ -105,6 +105,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 .compare-cell{border-radius:10px;padding:6px 4px;font-weight:950;line-height:1.25}
 .compare-cell.rank1{background:#fff0ea;color:#7c2d12}.compare-cell.rank2{background:#fff8c7;color:#713f12}
 .compare-main{font-size:13px}.compare-sub{display:block;margin-top:2px;font-size:10px;color:#64748b;font-weight:800}
+.recent-course-stats{display:grid;gap:3px;min-width:230px;text-align:left;font-size:10px;line-height:1.35}.recent-course-stats b{font-size:12px;color:#0f172a}.recent-course-stats span{color:#334155;font-weight:850}.recent-course-stats small{color:#64748b;font-weight:750}.recent-course-insufficient{min-width:110px;color:#64748b;font-size:12px;font-weight:900}
 .compare-season{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;margin-top:2px}.cs-fin{display:inline-grid;place-items:center;min-width:24px;height:24px;border-radius:8px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:950}.cs-fin.good{background:#fee2e2;color:#b91c1c}.cs-fin.mid{background:#dbeafe;color:#1d4ed8}.cs-fin.bad{background:#e5e7eb;color:#475569}.cs-fin.trouble{background:#111827;color:#fff}
 .compare-season-board{display:flex;gap:5px;align-items:stretch;justify-content:flex-start;min-width:280px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
 .cs-day{display:grid;grid-template-rows:auto 1fr;gap:3px;min-width:64px}

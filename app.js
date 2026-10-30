@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261030-naruto-live-comparison";
+const SITE_BUILD = "20261031-course-stats-6m";
 
 let manifest = null;
 let currentPayload = null;
@@ -1488,6 +1488,45 @@ function courseScore(b) {
   return num(b.course_top3_rate) * 0.7 + num(b.course_top3_diff) * 0.9 + (String(b.course_reliability) === "A" ? 10 : String(b.course_reliability) === "B" ? 6 : 0);
 }
 
+function recentCourseSixMonthInfo(b) {
+  const stats = b.recent_course_6m || {};
+  const actualCourse = Number(b.actual_course || b.entry_course || b.course || b.lane);
+  const statsCourse = Number(stats.course);
+  const racerId = String(b.player_id || b.reg_no || "").trim();
+  const statsRacerId = String(stats.registration_no || "").trim();
+  const valid = stats.status === "available"
+    && statsCourse === actualCourse
+    && racerId
+    && statsRacerId === racerId
+    && num(stats.starts, 0) > 0;
+  if (!valid) {
+    return '<div class="recent-course-insufficient">データ不足</div>';
+  }
+  const value = (key, suffix = "%") => {
+    const parsed = num(stats[key], NaN);
+    return Number.isFinite(parsed) ? `${parsed.toFixed(key === "avg_st" ? 2 : 1)}${suffix}` : "-";
+  };
+  const kimarite = stats.kimarite || {};
+  const decision = actualCourse === 1
+    ? `逃げ ${valueFrom(kimarite.escape_rate, "%")}`
+    : [
+      `差し ${valueFrom(kimarite.sashi_rate, "%")}`,
+      `まくり ${valueFrom(kimarite.makuri_rate, "%")}`,
+      `まくり差し ${valueFrom(kimarite.makuri_sashi_rate, "%")}`,
+    ].join(" / ");
+  return `<div class="recent-course-stats">
+    <b>${actualCourse}コース・直近6か月</b>
+    <span>1着 ${value("win_rate")} / 2連 ${value("top2_rate")} / 3連 ${value("top3_rate")}</span>
+    <span>平均ST ${value("avg_st", "")} / ${safe(stats.starts)}走</span>
+    <small>決まり手 ${decision}</small>
+  </div>`;
+}
+
+function valueFrom(raw, suffix = "") {
+  const parsed = num(raw, NaN);
+  return Number.isFinite(parsed) ? `${parsed.toFixed(1)}${suffix}` : "-";
+}
+
 function kimariteInfo(b) {
   const actualCourse = Number(
     b.actual_course ||
@@ -1626,14 +1665,15 @@ function renderCompare() {
       local: { score: localScore(b), main: `${compareMark(localScore(b))} ${safe(b.local_win)}`, sub: "当地勝率" },
       localSt: { score: localStScore(b), main: `${compareMark(localStScore(b))} ${safe(localSt)}`, sub: `当地平均ST / ${safe(b.boaters_local_st_rank || b.local_st_order)}` },
       course: { score: courseScore(b), main: `${compareMark(courseScore(b))} ${courseLabel(b)}`, sub: `3連 ${safe(b.course_top3_rate)}% / 差 ${safe(b.course_top3_diff)}pt` },
+      recentCourse: recentCourseSixMonthInfo(b),
       season: si,
     };
   });
   return `<div class="card"><h2>${r.race}R 選手比較</h2>
     <div class="note">各項目を簡易スコア化。列ごとに1位は薄い赤、2位は薄い黄色で表示します。</div>
     <div class="compare-wrap"><table class="compare-table">
-      <tr><th>名前</th><th>格</th><th>F累積</th><th>決まり手</th><th>モーター</th><th>当地</th><th>当地ST</th><th>コース適性</th><th>節間成績</th></tr>
-      ${rows.map((row) => `<tr><td>${lane(row.lane)} <b>${safe(row.name)}</b></td>${compareCell(rows,row,"grade")}<td class="compare-f-cell">${fBadge(row, "-")}</td>${compareCell(rows,row,"kimarite")}${compareCell(rows,row,"motor")}${compareCell(rows,row,"local")}${compareCell(rows,row,"localSt")}${compareCell(rows,row,"course")}${compareCell(rows,row,"season")}</tr>`).join("")}
+      <tr><th>名前</th><th>格</th><th>F累積</th><th>決まり手</th><th>モーター</th><th>当地</th><th>当地ST</th><th>コース適性</th><th>直近6か月</th><th>節間成績</th></tr>
+      ${rows.map((row) => `<tr><td>${lane(row.lane)} <b>${safe(row.name)}</b></td>${compareCell(rows,row,"grade")}<td class="compare-f-cell">${fBadge(row, "-")}</td>${compareCell(rows,row,"kimarite")}${compareCell(rows,row,"motor")}${compareCell(rows,row,"local")}${compareCell(rows,row,"localSt")}${compareCell(rows,row,"course")}<td>${row.recentCourse}</td>${compareCell(rows,row,"season")}</tr>`).join("")}
     </table></div>
   </div>`;
 }
