@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261031-course-cards-fix";
+const SITE_BUILD = "20261031-course-aptitude-five-levels";
 
 let manifest = null;
 let currentPayload = null;
@@ -1430,13 +1430,40 @@ function selectedCourseStats(b) {
   return Number(current.course) === Number(course) ? current : {};
 }
 
+function courseAptitude(b) {
+  const stats = selectedCourseStats(b);
+  const rawScore = stats.aptitude_score;
+  const score = rawScore === undefined || rawScore === null || rawScore === "" ? NaN : Number(rawScore);
+  const valid = stats.status === "available"
+    && Number(stats.course) === displayedCourse(b)
+    && num(stats.starts, 0) >= 10
+    && Number.isFinite(score);
+  if (!valid) return { label: "判定不可", className: "unavailable", score: NaN };
+  if (score >= 60) return { label: "得意", className: "good", score };
+  if (score >= 53) return { label: "やや得意", className: "slightly-good", score };
+  if (score >= 47) return { label: "標準", className: "normal", score };
+  if (score >= 40) return { label: "やや苦手", className: "slightly-bad", score };
+  return { label: "苦手", className: "bad", score };
+}
+
 function courseLabel(b) {
-  const label = String(selectedCourseStats(b).aptitude_label || "");
-  return ["得意", "標準", "苦手"].includes(label) ? label : "判定不可";
+  return courseAptitude(b).label;
 }
 
 function courseClass(label) {
-  return label === "得意" ? "good" : label === "苦手" ? "bad" : label === "標準" ? "normal" : "unavailable";
+  return label === "得意" ? "good"
+    : label === "やや得意" ? "slightly-good"
+      : label === "標準" ? "normal"
+        : label === "やや苦手" ? "slightly-bad"
+          : label === "苦手" ? "bad" : "unavailable";
+}
+
+function courseAptitudeDisplay(b) {
+  const aptitude = courseAptitude(b);
+  if (!Number.isFinite(aptitude.score)) {
+    return '<div class="recent-course-insufficient"><span class="course-aptitude-label unavailable">判定不可</span></div>';
+  }
+  return `<div class="course-aptitude-display"><span class="course-aptitude-label ${aptitude.className}">${aptitude.label}</span><span class="course-aptitude-score">${aptitude.score.toFixed(1)}点</span></div>`;
 }
 
 function courseSummary(b) {
@@ -1506,16 +1533,7 @@ function courseScore(b) {
 }
 
 function recentCourseSixMonthInfo(b) {
-  const stats = selectedCourseStats(b);
-  const actualCourse = displayedCourse(b);
-  const statsCourse = Number(stats.course);
-  const valid = stats.status === "available"
-    && statsCourse === actualCourse
-    && num(stats.starts, 0) >= 10;
-  if (!valid) {
-    return '<div class="recent-course-insufficient">判定不可</div>';
-  }
-  return `<span class="course-aptitude-label ${courseClass(courseLabel(b))}">${courseLabel(b)}</span>`;
+  return courseAptitudeDisplay(b);
 }
 
 function valueFrom(raw, suffix = "") {
@@ -1535,6 +1553,22 @@ function courseAverageSt(raw) {
   return Number.isFinite(parsed) ? parsed.toFixed(2) : "-";
 }
 
+function courseRateIsExcellent(stats, key) {
+  const rate = Number(stats?.[key]);
+  const mean = Number(stats?.comparison_mean?.[key]);
+  return stats?.status === "available"
+    && num(stats?.starts, 0) >= 10
+    && num(stats?.comparison_size, 0) >= 10
+    && Number.isFinite(rate)
+    && Number.isFinite(mean)
+    && (rate - mean) * 100 >= 5;
+}
+
+function courseRateCell(stats, key) {
+  const className = courseRateIsExcellent(stats, key) ? " course-rate-excellent" : "";
+  return `<b class="${className.trim()}">${courseRate(stats?.[key])}</b>`;
+}
+
 function courseKimarite(stats) {
   const kimarite = stats?.kimarite || {};
   const labels = ["逃げ", "差し", "まくり", "まくり差し", "抜き", "恵まれ"];
@@ -1550,18 +1584,17 @@ function renderCourseSixMonthCards(r) {
     <div class="course-six-month-grid">${racers.map((b) => {
       const stats = selectedCourseStats(b);
       const course = displayedCourse(b);
-      const label = courseLabel(b);
       const starts = stats.starts !== undefined && stats.starts !== null && Number.isFinite(Number(stats.starts)) ? Number(stats.starts) : "-";
       return `<article class="course-six-month-card lane-${safe(b.lane)}">
         <header>${lane(b.lane)}<div><b>${safe(b.name)}</b><span>対象進入 ${Number.isFinite(course) ? course : "-"}コース</span></div></header>
         <div class="course-card-summary">
           <div class="course-starts"><span>直近6か月</span><strong>${starts}</strong><small>走</small></div>
-          <span class="course-aptitude-label ${courseClass(label)}">${label}</span>
+          ${courseAptitudeDisplay(b)}
         </div>
         <div class="course-rate-grid">
-          <div><span>1着率</span><b>${courseRate(stats.win_rate)}</b></div>
-          <div><span>2連対率</span><b>${courseRate(stats.top2_rate)}</b></div>
-          <div><span>3連対率</span><b>${courseRate(stats.top3_rate)}</b></div>
+          <div><span>1着率</span>${courseRateCell(stats, "win_rate")}</div>
+          <div><span>2連対率</span>${courseRateCell(stats, "top2_rate")}</div>
+          <div><span>3連対率</span>${courseRateCell(stats, "top3_rate")}</div>
           <div><span>平均ST</span><b>${courseAverageSt(stats.average_st)}</b></div>
         </div>
         <div class="course-kimarite"><span>コース別決まり手</span><div>${courseKimarite(stats)}</div></div>
