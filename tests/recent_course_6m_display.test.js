@@ -18,11 +18,15 @@ assert.match(app, /コース別決まり手/);
 assert.match(app, /aptitude_label/);
 assert.match(app, /recent_course_6m_by_course/);
 assert.match(app, /displayedCourse/);
+assert.match(app, /"course-six-month": \(\) => renderCourseSixMonthCards\(race\(\)\)/);
 assert.doesNotMatch(app, /course_top3_diff.*コース適性/);
+const compareBody = app.slice(app.indexOf("function renderCompare()"), app.indexOf("function tableFromRows"));
+assert.doesNotMatch(compareBody, /renderCourseSixMonthCards/);
 assert.match(styles, /course-six-month-grid/);
 assert.match(styles, /grid-template-columns:repeat\(3/);
 assert.match(styles, /@media\(max-width:600px\).*course-six-month-grid\{grid-template-columns:1fr/s);
-assert.match(index, /app\.js\?v=20261031-course-aptitude/);
-assert.match(index, /styles\.css\?v=20261031-course-aptitude/);
+assert.match(index, /data-pane="compare">選手比較<\/button>[\s\S]*data-pane="course-six-month">6か月コース<\/button>[\s\S]*data-pane="motor-recent">モーター10走<\/button>/);
+assert.match(index, /app\.js\?v=20261031-course-cards-fix/);
+assert.match(index, /styles\.css\?v=20261031-course-cards-fix/);
 
 console.log("recent six-month course display tests passed");

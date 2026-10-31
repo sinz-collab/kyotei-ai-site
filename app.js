@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261031-course-aptitude";
+const SITE_BUILD = "20261031-course-cards-fix";
 
 let manifest = null;
 let currentPayload = null;
@@ -916,7 +916,7 @@ async function openVenue(slug, route = {}) {
   currentPayload.eventDayLabel = currentPayload.eventDayLabel || v.eventDayLabel || "";
   currentPayload.eventDay = currentPayload.eventDay || v.eventDay || "";
   currentRaceNo = races.some((r) => Number(r.race) === Number(route.race)) ? Number(route.race) : (races[0]?.race || 1);
-  currentPane = ["entry", "compare", "realtime", "tide", "odds", "prediction", "bet-builder", "logs", "result"].includes(route.pane) ? route.pane : "entry";
+  currentPane = ["entry", "compare", "course-six-month", "realtime", "tide", "odds", "prediction", "bet-builder", "logs", "result"].includes(route.pane) ? route.pane : "entry";
   $("syncState").textContent = "LIVE JSON";
   showView("race");
   renderRace();
@@ -1234,6 +1234,7 @@ function paneMarkup(pane = currentPane) {
   const map = {
     entry: renderEntry,
     compare: renderCompare,
+    "course-six-month": () => renderCourseSixMonthCards(race()),
     realtime: renderRealtime,
     tide: renderTide,
     prediction: renderPrediction,
@@ -1716,7 +1717,7 @@ function renderCompare() {
       <tr><th>名前</th><th>格</th><th>F累積</th><th>決まり手</th><th>モーター</th><th>当地</th><th>当地ST</th><th>コース適性</th><th>節間成績</th></tr>
       ${rows.map((row) => `<tr><td>${lane(row.lane)} <b>${safe(row.name)}</b></td>${compareCell(rows,row,"grade")}<td class="compare-f-cell">${fBadge(row, "-")}</td>${compareCell(rows,row,"kimarite")}${compareCell(rows,row,"motor")}${compareCell(rows,row,"local")}${compareCell(rows,row,"localSt")}${compareCell(rows,row,"course")}${compareCell(rows,row,"season")}</tr>`).join("")}
     </table></div>
-  </div>${renderCourseSixMonthCards(r)}`;
+  </div>`;
 }
 
 function tableFromRows(title, rows, columns) {
