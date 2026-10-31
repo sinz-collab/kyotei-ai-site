@@ -1581,6 +1581,7 @@ function renderCourseSixMonthCards(r) {
   const racers = Array.isArray(r.racers) && r.racers.length ? r.racers : (r.entries || []);
   return `<div class="card course-six-month-section">
     <h2>${safe(r.race)}R 直近6か月・コース別成績</h2>
+    <div class="note course-aptitude-note">適性は直近6か月の成績を同級別・同コース平均と比較した5段階評価です。各率が平均より5ポイント以上高い場合は赤太字で表示します。10走未満や比較データ不足の場合は判定・強調しません。</div>
     <div class="course-six-month-grid">${racers.map((b) => {
       const stats = selectedCourseStats(b);
       const course = displayedCourse(b);
