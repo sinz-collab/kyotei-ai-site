@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261031-course-aptitude-five-levels";
+const SITE_BUILD = "20261102-top-deadlines";
 
 let manifest = null;
 let currentPayload = null;
@@ -22,6 +22,7 @@ let currentPredictionAvailable = true;
 let ticketMode = "ai";
 let liveRefreshTimer = null;
 const betBuilderStates = new Map();
+let topClockTimer = null;
 
 const $ = (id) => document.getElementById(id);
 const missingMark = () => currentVenueSlug === "naruto" ? "—" : "-";
@@ -846,6 +847,7 @@ async function init() {
     manifest = await fetchJson("manifest.json");
     $("syncState").textContent = "LIVE JSON";
     renderTop();
+    startTopClock();
     const route = parseRoute();
     if (route.venue) await openVenue(route.venue, route);
   } catch (err) {
@@ -853,7 +855,39 @@ async function init() {
     $("venueGrid").innerHTML = `<div class="error">JSONを読み込めませんでした。<br>${err.message}<br><span class="note">config.js の KYOTEI_DATA_BASE を確認してください。</span></div>`;
   }
 }
-function renderTop() {
+function venueScheduleState(venue, now = Date.now()) {
+  const date = String(manifest?.date || "");
+  const jstDate = new Date(now + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date !== jstDate) return null;
+
+  const rows = Array.isArray(venue?.deadlines) ? venue.deadlines : [];
+  if (rows.length !== 12) return null;
+  const schedule = rows.map((row, index) => {
+    const raceNo = Number(row?.race);
+    const deadline = String(row?.deadline || "");
+    if (raceNo !== index + 1 || !/^\d{1,2}:\d{2}$/.test(deadline)) return null;
+    const [hour, minute] = deadline.split(":").map(Number);
+    if (hour > 23 || minute > 59) return null;
+    const [year, month, day] = date.split("-").map(Number);
+    return {
+      raceNo,
+      deadline,
+      time: Date.UTC(year, month - 1, day, hour - 9, minute),
+    };
+  });
+  if (schedule.some((row) => !row)) return null;
+
+  const nextRace = schedule.find((row) => now <= row.time);
+  if (!nextRace) return { ended: true, warning: false };
+  return {
+    ended: false,
+    warning: now >= nextRace.time - 5 * 60 * 1000,
+    raceNo: nextRace.raceNo,
+    deadline: nextRace.deadline,
+  };
+}
+
+function renderTop(now = Date.now()) {
   $("dateTitle").textContent = `${manifest.date || ""} のレース`;
   $("venueGrid").innerHTML = (manifest.venues || []).map((v) => {
     const eventLabel = `<b>${esc(v.eventDayLabel || "開催日目不明")}</b>`;
@@ -864,10 +898,17 @@ function renderTop() {
         ? `<strong class="venue-event-label"><span class="venue-event-grade ${gradeMatch[1] === "SG" ? "sg" : "g"}">${esc(gradeMatch[1])}</span>${esc(rawSpecialEventLabel.slice(gradeMatch[1].length))}</strong>`
         : `<strong class="venue-event-label">${esc(rawSpecialEventLabel)}</strong>`
       : "";
-    if (v.open && (v.predictionStatus === "unavailable" || v.prediction_status === "unavailable")) return `<button class="venue" onclick="openVenue('${v.slug}')">
+    const schedule = v.open ? venueScheduleState(v, now) : null;
+    const scheduleClass = schedule?.warning ? " deadline-warning" : "";
+    const deadlineText = schedule
+      ? schedule.ended
+        ? '<span class="venue-next-race">本日終了</span>'
+        : `<span class="venue-next-race${schedule.warning ? " warning" : ""}">${schedule.raceNo}R ${esc(schedule.deadline)}</span>`
+      : `1R締切 ${esc(v.firstDeadline || "-")}`;
+    if (v.open && (v.predictionStatus === "unavailable" || v.prediction_status === "unavailable")) return `<button class="venue${scheduleClass}" onclick="openVenue('${v.slug}')">
       <div class="venue-status off">予想準備中</div>
       <h2>${v.name}</h2>
-      <p>当日用予想データ未生成<br>${v.entryCount || 0}R分 / 1R締切 ${v.firstDeadline || "-"}</p>
+      <p>当日用予想データ未生成<br>${v.entryCount || 0}R分 / ${deadlineText}</p>
       <strong>レース情報を見る</strong>
     </button>`;
     if (!v.open) return `<div class="venue off">
@@ -875,13 +916,20 @@ function renderTop() {
       <h2>${v.name}</h2>
       <p>本日データなし</p>
     </div>`;
-    return `<button class="venue" onclick="openVenue('${v.slug}')">
+    return `<button class="venue${scheduleClass}" onclick="openVenue('${v.slug}')">
       <div class="venue-status on">${specialEventLabel}<span>開催</span>${eventLabel}</div>
       <h2>${v.name}</h2>
-      <p>${v.entryCount || 0}R分<br>1R締切 ${v.firstDeadline || "-"}</p>
+      <p>${v.entryCount || 0}R分<br>${deadlineText}</p>
       <strong>予想を見る</strong>
     </button>`;
   }).join("");
+}
+
+function startTopClock() {
+  if (topClockTimer) clearInterval(topClockTimer);
+  topClockTimer = setInterval(() => {
+    if (!document.hidden && manifest && !$("topView").hidden) renderTop();
+  }, 30 * 1000);
 }
 
 async function openVenue(slug, route = {}) {
@@ -947,6 +995,10 @@ async function refreshCurrentVenue() {
 }
 
 function showView(view) {
+  if (view !== "top" && topClockTimer) {
+    clearInterval(topClockTimer);
+    topClockTimer = null;
+  }
   $("scoresView").hidden = view !== "scores";
   if (view === "scores") {
     if (liveRefreshTimer) clearInterval(liveRefreshTimer);
@@ -961,6 +1013,8 @@ function showView(view) {
     if (liveRefreshTimer) clearInterval(liveRefreshTimer);
     liveRefreshTimer = null;
     clearRoute();
+    renderTop();
+    startTopClock();
   }
 }
 

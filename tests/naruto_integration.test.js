@@ -7,7 +7,7 @@ const source = fs
   .readFileSync(path.join(__dirname, "..", "app.js"), "utf8")
   .replace(/\r\n?/g, "\n");
 
-const renderStart = source.indexOf("function renderTop()");
+const renderStart = source.indexOf("function venueScheduleState(");
 const renderEnd = source.indexOf("async function openVenue", renderStart);
 assert.ok(renderStart >= 0 && renderEnd > renderStart);
 

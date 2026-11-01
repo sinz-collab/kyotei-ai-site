@@ -6,7 +6,7 @@ const vm = require("node:vm");
 const source = fs
   .readFileSync(path.join(__dirname, "..", "app.js"), "utf8")
   .replace(/\r\n?/g, "\n");
-const start = source.indexOf("function renderTop()");
+const start = source.indexOf("function venueScheduleState(");
 const end = source.indexOf("async function openVenue", start);
 assert.ok(start >= 0 && end > start);
 
