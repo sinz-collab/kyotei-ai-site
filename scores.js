@@ -1,6 +1,7 @@
 // Read public predictions/results only; never run or alter a prediction engine.
 let scoresRequest = 0;
 const SCORES_FLY_VENUES = new Set(['toda', 'fukuoka', 'ashiya', 'tokoname', 'wakamatsu', 'biwako', 'naruto']);
+SCORES_FLY_VENUES.add('heiwajima');
 
 function scoresFlyVenue(venueSlug) {
   return SCORES_FLY_VENUES.has(venueSlug);

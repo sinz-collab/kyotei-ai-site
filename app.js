@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261102-top-deadlines";
+const SITE_BUILD = "20261102-heiwajima-fly-v6";
 
 let manifest = null;
 let currentPayload = null;
@@ -2277,7 +2277,10 @@ function renderPrediction() {
   const isNarutoFly = currentPayload?.venueId === "naruto"
     && ["complete", "unavailable"].includes(p.flyPrediction?.status)
     && String(p.flyPrediction?.modelVersion || "").startsWith("naruto_");
-  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly || isTokonameFly || isNarutoFly;
+  const isHeiwajimaFly = currentPayload?.venueId === "heiwajima"
+    && ["morning", "live"].includes(p.flyPrediction?.status)
+    && p.flyPrediction?.modelVersion === "heiwajima_fly_v6_attack_sum_candidate_20261102";
+  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly || isTokonameFly || isNarutoFly || isHeiwajimaFly;
   const dedicatedFly = isDedicatedFlyVenue ? p.flyPrediction : null;
   const todaFly = isTodaFly ? dedicatedFly : null;
   const lane1FlyProbability = firstValue(p.lane1FlyProbability, p.flyPrediction?.probability);
@@ -2325,6 +2328,7 @@ function renderPrediction() {
         : isFinalStage));
   const showDeltas = liveReviewSucceeded && hasCompleteProbabilityReview(p);
   const lane1FlyStageLabel = ["wakamatsu", "naruto"].includes(currentPayload?.venueId)
+    || currentPayload?.venueId === "heiwajima"
     ? (isFinalStage ? "LIVE" : "朝")
     : "";
 
@@ -2475,7 +2479,7 @@ function renderResult() {
     ${r.order ? `<div class="result-line"><div class="result-label">3連単 着順</div><div class="finish-row">${order.map((n, i) => `${i ? '<span class="finish-arrow" aria-hidden="true"></span>' : ""}${finishBoat(n)}`).join("")}</div></div>
       <div class="result-pay"><div class="paybox"><span>払戻</span><b>${safe(r.payout3t)}</b></div><div class="paybox"><span>人気</span><b>${safe(r.popularity3t)}</b></div></div>` :
       `<div class="result-line"><div class="result-label">結果待ち</div><div class="note">締切9分後から結果取得を試します。</div></div>`}
-    <div class="result-sub"><div class="paybox"><span>決まり手</span><b>${safe(r.kimarite)}</b>${kimariteNote}</div><div class="paybox"><span>AI予想</span><b>${hitAi ? "的中" : "-"}</b></div><div class="paybox"><span>${dedicatedFlyVenue ? "1号艇飛び専用10点" : (currentVenueSlug === "biwako" ? "1号艇飛び予想" : "AI荒れ")}</span><b>${hitUpset ? "的中" : "-"}</b></div></div>
+    <div class="result-sub"><div class="paybox"><span>決まり手</span><b>${safe(r.kimarite)}</b>${kimariteNote}</div><div class="paybox"><span>AI予想</span><b>${hitAi ? "的中" : "-"}</b></div><div class="paybox"><span>${dedicatedFlyVenue ? `1号艇飛び専用${currentVenueSlug === "heiwajima" ? 8 : 10}点` : (currentVenueSlug === "biwako" ? "1号艇飛び予想" : "AI荒れ")}</span><b>${hitUpset ? "的中" : "-"}</b></div></div>
     ${r.fetchedAt ? `<div class="note">結果取得: ${esc(r.fetchedAt)}</div>` : ""}
   </div>`;
 }
