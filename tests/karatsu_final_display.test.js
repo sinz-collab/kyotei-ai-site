@@ -56,7 +56,7 @@ assert.match(
 );
 assert.match(
   appSource,
-  /\["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu"\]\.includes\(currentVenueSlug\)/,
+  /\["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu", "kiryu"\]\.includes\(currentVenueSlug\)/,
   "Karatsu must refresh live payloads every minute",
 );
 

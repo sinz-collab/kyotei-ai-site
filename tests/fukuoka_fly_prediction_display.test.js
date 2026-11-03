@@ -7,7 +7,7 @@ const app = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 
 assert.match(
   app,
-  /\["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu"\]\.includes\(currentVenueSlug\)[\s\S]*?\? 60 \* 1000[\s\S]*?: 4 \* 60 \* 1000/,
+  /\["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu", "kiryu"\]\.includes\(currentVenueSlug\)[\s\S]*?\? 60 \* 1000[\s\S]*?: 4 \* 60 \* 1000/,
   "Venue-specific live displays including Karatsu must refresh every minute without changing other venues",
 );
 const css = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");

@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261102-heiwajima-fly-v6";
+const SITE_BUILD = "20261103-kiryu-data";
 
 let manifest = null;
 let currentPayload = null;
@@ -25,7 +25,7 @@ const betBuilderStates = new Map();
 let topClockTimer = null;
 
 const $ = (id) => document.getElementById(id);
-const missingMark = () => currentVenueSlug === "naruto" ? "—" : "-";
+const missingMark = () => ["naruto", "kiryu"].includes(currentVenueSlug) ? "—" : "-";
 const safe = (v, fallback) => (
   v === undefined || v === null || v === ""
     ? (fallback === undefined ? missingMark() : fallback)
@@ -796,7 +796,7 @@ async function refreshSiteBuildIfStale() {
 function startLiveRefresh() {
   if (liveRefreshTimer) clearInterval(liveRefreshTimer);
   let refreshInFlight = false;
-  const refreshInterval = ["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu"].includes(currentVenueSlug)
+  const refreshInterval = ["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu", "kiryu"].includes(currentVenueSlug)
     ? 60 * 1000
     : 4 * 60 * 1000;
   liveRefreshTimer = setInterval(async () => {

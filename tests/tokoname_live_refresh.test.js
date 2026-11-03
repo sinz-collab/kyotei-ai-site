@@ -16,7 +16,7 @@ assert.match(
 );
 assert.match(
   app,
-  /\["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu"\]\.includes\(currentVenueSlug\)[\s\S]*?\? 60 \* 1000/,
+  /\["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu", "kiryu"\]\.includes\(currentVenueSlug\)[\s\S]*?\? 60 \* 1000/,
   "Tokoname final prediction refresh must run every minute",
 );
 
