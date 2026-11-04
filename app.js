@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261103-kiryu-data";
+const SITE_BUILD = "20261104-kiryu-half-lap";
 
 let manifest = null;
 let currentPayload = null;
@@ -290,13 +290,14 @@ function completeSixLaneRows(document, key) {
 }
 
 function completeOriginalExhibitionRows(document) {
-  if (currentVenueSlug === "biwako"
+  if (["biwako", "kiryu"].includes(currentVenueSlug)
       && ["partial", "complete"].includes(document?.status)) {
     const candidate = Array.isArray(document?.data?.entries) ? document.data.entries : [];
     const rows = candidate.filter((row) => {
       const laneNo = Number(row?.lane);
+      const firstMetric = currentVenueSlug === "kiryu" ? row.half_lap_time : row.lap_time;
       return laneNo >= 1 && laneNo <= 6
-        && [row.lap_time, row.turn_time, row.straight_time]
+        && [firstMetric, row.turn_time, row.straight_time]
           .some((value) => positiveNumber(value) !== null);
     });
     const lanes = rows.map((row) => Number(row.lane));
@@ -312,10 +313,13 @@ function completeOriginalExhibitionRows(document) {
 }
 
 function hasDisplayableOriginalExhibition(original, available, embeddedOriginal) {
-  if (currentVenueSlug === "biwako") {
+  if (["biwako", "kiryu"].includes(currentVenueSlug)) {
     return available === true && [1, 2, 3, 4, 5, 6].some((laneNo) => {
       const row = original[String(laneNo)] || original[laneNo] || {};
-      return [row.lap ?? row.lap_time, row.turn ?? row.turn_time, row.line || row.straight || row.straight_time]
+      const firstMetric = currentVenueSlug === "kiryu"
+        ? (row.halfLap ?? row.half_lap_time)
+        : (row.lap ?? row.lap_time);
+      return [firstMetric, row.turn ?? row.turn_time, row.line || row.straight || row.straight_time]
         .some((value) => positiveNumber(value) !== null);
     });
   }
@@ -585,10 +589,13 @@ function mergeOriginalExhibitionRows(existingOriginal, originalEntries, exhibiti
     const exhibitionTime = exhibitionTimeFromRow(exhibition)
       ?? exhibitionTimeFromRow({ exhibition_time: original.sum_exhibition })
       ?? exhibitionTimeFromRow(previous);
-    const lap = firstValue(original.lap_time, previous.lap);
-    const lapNumber = positiveNumber(lap);
+    const isKiryu = currentVenueSlug === "kiryu";
+    const firstMetric = isKiryu
+      ? firstValue(original.half_lap_time, previous.halfLap, previous.half_lap_time)
+      : firstValue(original.lap_time, previous.lap);
+    const lapNumber = positiveNumber(firstMetric);
     const sourceSum = positiveNumber(original.sum);
-    const calculatedSum = lapNumber !== null && exhibitionTime !== null
+    const calculatedSum = !isKiryu && lapNumber !== null && exhibitionTime !== null
       ? Math.round((lapNumber + exhibitionTime) * 100) / 100
       : null;
     const sum = sourceSum !== null
@@ -596,7 +603,7 @@ function mergeOriginalExhibitionRows(existingOriginal, originalEntries, exhibiti
       : (calculatedSum !== null ? calculatedSum : firstValue(previous.sum, null));
     merged[key] = {
       ...previous,
-      lap,
+      ...(isKiryu ? { halfLap: firstMetric } : { lap: firstMetric }),
       turn: firstValue(original.turn_time, previous.turn),
       line: firstValue(original.straight_time, previous.line, previous.straight),
       exhibition_time: exhibitionTime,
@@ -2096,8 +2103,16 @@ function renderRealtime() {
       <div class="note">データが取得済みになると、このタブに自動で反映されます。</div>
     </div>
     <div class="card"><h2>オリジナル展示</h2>
-      ${hasOriginal ? `<div class="table-scroll"><table><tr><th>枠</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
-        ${[1,2,3,4,5,6].map((n) => `<tr><td>${lane(n)}</td><td>${timeBadge(firstValue(original[n]?.lap, original[n]?.lap_time), valueRankClass(original, n, original[n]?.lap !== undefined ? "lap" : "lap_time"))}</td><td>${timeBadge(firstValue(original[n]?.turn, original[n]?.turn_time), valueRankClass(original, n, original[n]?.turn !== undefined ? "turn" : "turn_time"))}</td><td>${timeBadge(firstValue(original[n]?.line, original[n]?.straight, original[n]?.straight_time), valueRankClass(original, n, original[n]?.line !== undefined ? "line" : (original[n]?.straight !== undefined ? "straight" : "straight_time")))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, original[n]?.exhibition_time !== undefined ? "exhibition_time" : "sum_exhibition"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(firstValue(original[n]?.sum_diff, original[n]?.sum_difference, original[n]?.diff))}</td></tr>`).join("")}
+      ${hasOriginal ? `<div class="table-scroll"><table><tr><th>枠</th><th>${currentVenueSlug === "kiryu" ? "半周タイム" : "1周"}</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
+        ${[1,2,3,4,5,6].map((n) => {
+          const firstMetric = currentVenueSlug === "kiryu"
+            ? firstValue(original[n]?.halfLap, original[n]?.half_lap_time)
+            : firstValue(original[n]?.lap, original[n]?.lap_time);
+          const firstMetricKey = currentVenueSlug === "kiryu"
+            ? (original[n]?.halfLap !== undefined ? "halfLap" : "half_lap_time")
+            : (original[n]?.lap !== undefined ? "lap" : "lap_time");
+          return `<tr><td>${lane(n)}</td><td>${timeBadge(firstMetric, valueRankClass(original, n, firstMetricKey))}</td><td>${timeBadge(firstValue(original[n]?.turn, original[n]?.turn_time), valueRankClass(original, n, original[n]?.turn !== undefined ? "turn" : "turn_time"))}</td><td>${timeBadge(firstValue(original[n]?.line, original[n]?.straight, original[n]?.straight_time), valueRankClass(original, n, original[n]?.line !== undefined ? "line" : (original[n]?.straight !== undefined ? "straight" : "straight_time")))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, original[n]?.exhibition_time !== undefined ? "exhibition_time" : "sum_exhibition"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(firstValue(original[n]?.sum_diff, original[n]?.sum_difference, original[n]?.diff))}</td></tr>`;
+        }).join("")}
       </table></div>` : `<div class="note">オリジナル展示はまだ未取得です。</div>`}
     </div>`;
 }
