@@ -42,7 +42,7 @@ assert.match(styles, /course-rate-excellent\{color:#dc2626;font-weight:950\}/);
 assert.match(styles, /grid-template-columns:repeat\(3/);
 assert.match(styles, /@media\(max-width:600px\).*course-six-month-grid\{grid-template-columns:1fr/s);
 assert.match(index, /data-pane="compare">選手比較<\/button>[\s\S]*data-pane="course-six-month">6か月コース<\/button>[\s\S]*data-pane="motor-recent">モーター10走<\/button>/);
-assert.match(index, /app\.js\?v=20261104-kiryu-half-lap/);
-assert.match(index, /styles\.css\?v=20261104-kiryu-half-lap/);
+assert.match(index, /app\.js\?v=20261104-kiryu-ai/);
+assert.match(index, /styles\.css\?v=20261104-kiryu-ai/);
 
 console.log("recent six-month course display tests passed");

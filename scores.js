@@ -2,6 +2,7 @@
 let scoresRequest = 0;
 const SCORES_FLY_VENUES = new Set(['toda', 'fukuoka', 'ashiya', 'tokoname', 'wakamatsu', 'biwako', 'naruto']);
 SCORES_FLY_VENUES.add('heiwajima');
+SCORES_FLY_VENUES.add('kiryu');
 
 function scoresFlyVenue(venueSlug) {
   return SCORES_FLY_VENUES.has(venueSlug);
@@ -40,7 +41,7 @@ function scoresFinal(raceData, legacy, result, venueSlug) {
   const history = raceData?.prediction_history || legacy?.prediction_history || raceData?.prediction?.prediction_history;
   const finalHistory = [
     ...(Array.isArray(history?.final) ? history.final : []),
-    ...(['ashiya', 'naruto'].includes(venueSlug) && Array.isArray(history?.live) ? history.live : []),
+    ...(['ashiya', 'naruto', 'kiryu'].includes(venueSlug) && Array.isArray(history?.live) ? history.live : []),
   ];
   const resultTime = scoresResultTime(result);
   const eligibleHistory = Number.isFinite(resultTime)
@@ -59,7 +60,7 @@ function scoresFinal(raceData, legacy, result, venueSlug) {
   return candidates.find((p) => (!Number.isFinite(resultTime) || !Number.isFinite(scoresItemTime(p)) || scoresItemTime(p) <= resultTime)
     && p && !['error', 'fetch_error', 'parse_error', 'pending'].includes(p.status)
     && (p.finalPredictionStatus === 'complete' || p.phase === 'final' || p.stage === 'final'
-      || p.predictionStage === 'final' || (venueSlug === 'naruto' && p.predictionStage === 'live') || p.predictionStage?.code === 'final'
+      || p.predictionStage === 'final' || (['naruto', 'kiryu'].includes(venueSlug) && p.predictionStage === 'live') || p.predictionStage?.code === 'final'
       || p.predictionStage?.label === '本予想' || p.predictionStage?.badge === '本予想')) || null;
 }
 

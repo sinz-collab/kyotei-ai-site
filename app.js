@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261104-kiryu-half-lap";
+const SITE_BUILD = "20261104-kiryu-ai";
 
 let manifest = null;
 let currentPayload = null;
@@ -709,7 +709,7 @@ async function loadLiveRace() {
   }
   // Venue-specific final predictions must come from their server-side engines.
   // Keep this legacy browser review available to other venues only.
-  if (currentPredictionAvailable && !["tokoname", "toda", "ashiya", "wakamatsu", "shimonoseki", "fukuoka", "karatsu", "naruto"].includes(currentVenueSlug)) {
+  if (currentPredictionAvailable && !["tokoname", "toda", "ashiya", "wakamatsu", "shimonoseki", "fukuoka", "karatsu", "naruto", "kiryu"].includes(currentVenueSlug)) {
     applyLivePredictionReview(prediction, { direct, exhibition, original_exhibition: original, odds });
   }
   if (validLiveDocument(result, "result")) {
@@ -2292,10 +2292,13 @@ function renderPrediction() {
   const isNarutoFly = currentPayload?.venueId === "naruto"
     && ["complete", "unavailable"].includes(p.flyPrediction?.status)
     && String(p.flyPrediction?.modelVersion || "").startsWith("naruto_");
+  const isKiryuFly = currentPayload?.venueId === "kiryu"
+    && ["morning", "live"].includes(p.flyPrediction?.status)
+    && p.flyPrediction?.modelVersion === "kiryu_independent_6plus4_frozen_20261104";
   const isHeiwajimaFly = currentPayload?.venueId === "heiwajima"
     && ["morning", "live"].includes(p.flyPrediction?.status)
     && p.flyPrediction?.modelVersion === "heiwajima_fly_v6_attack_sum_candidate_20261102";
-  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly || isTokonameFly || isNarutoFly || isHeiwajimaFly;
+  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly || isTokonameFly || isNarutoFly || isKiryuFly || isHeiwajimaFly;
   const dedicatedFly = isDedicatedFlyVenue ? p.flyPrediction : null;
   const todaFly = isTodaFly ? dedicatedFly : null;
   const lane1FlyProbability = firstValue(p.lane1FlyProbability, p.flyPrediction?.probability);
@@ -2321,7 +2324,9 @@ function renderPrediction() {
     ? `1号艇飛び買い目<span>${isWakamatsuFly ? wakamatsuFlyTickets.length : dedicatedFlyTickets.length}点</span>`
     : (isBiwakoTickets ? `1号艇飛び予想<span>${(p.aiUpset || []).length}点</span>` : "AI荒れ予想");
   const flow = p.probabilityFlow || {};
-  const isFinalStage = currentVenueSlug === "naruto"
+  const isFinalStage = currentVenueSlug === "kiryu"
+    ? p.predictionStage === "live"
+    : currentVenueSlug === "naruto"
     ? p.predictionStage === "live"
     : currentVenueSlug === "tokoname"
     ? isVerifiedTokonameFinalPrediction(p)
@@ -2342,7 +2347,7 @@ function renderPrediction() {
         ? isVerifiedNarutoFinalPrediction(p)
         : isFinalStage));
   const showDeltas = liveReviewSucceeded && hasCompleteProbabilityReview(p);
-  const lane1FlyStageLabel = ["wakamatsu", "naruto"].includes(currentPayload?.venueId)
+  const lane1FlyStageLabel = ["wakamatsu", "naruto", "kiryu"].includes(currentPayload?.venueId)
     || currentPayload?.venueId === "heiwajima"
     ? (isFinalStage ? "LIVE" : "朝")
     : "";

@@ -57,7 +57,7 @@ assert.equal(missingContext.testSafe("取得済み"), "取得済み");
 
 assert.match(
   source,
-  /\["tokoname", "toda", "ashiya", "wakamatsu", "shimonoseki", "fukuoka", "karatsu", "naruto"\]/,
+  /\["tokoname", "toda", "ashiya", "wakamatsu", "shimonoseki", "fukuoka", "karatsu", "naruto", "kiryu"\]/,
 );
 assert.match(source, /架空の確率、SAB、買い目は表示しません。/);
 assert.match(source, /const names = \["direct", "exhibition", "original_exhibition", "odds", "result"\]/);
