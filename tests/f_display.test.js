@@ -38,7 +38,7 @@ assert.match(source, /compareCell\(rows,row,"grade"\)[^\n]*<td class="compare-f-
 assert.doesNotMatch(source, /class="compare-f-wrap"/);
 assert.match(styles, /\.f-badge\{[^}]*background:#dc2626[^}]*color:#fff[^}]*white-space:nowrap/);
 assert.match(styles, /\.compare-wrap\{[^}]*overflow-x:auto/);
-assert.match(index, /styles\.css\?v=20261104-kiryu-ai/);
-assert.match(index, /app\.js\?v=20261104-kiryu-ai/);
+assert.match(index, /styles\.css\?v=20261104-kiryu-exhibition-sum/);
+assert.match(index, /app\.js\?v=20261104-kiryu-exhibition-sum/);
 
 console.log("F display tests passed");

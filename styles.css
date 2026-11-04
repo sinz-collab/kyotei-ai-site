@@ -119,6 +119,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 .cs-run b{font-size:10px}.cs-run strong{font-size:12px}.cs-run em{font-style:normal;font-size:8px;color:#64748b}.cs-run.good{background:#fee2e2;color:#b91c1c;border-color:#fecaca}.cs-run.mid{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}.cs-run.bad{background:#e5e7eb;color:#475569;border-color:#d1d5db}.cs-run.trouble{background:#111827;color:#fff;border-color:#111827}.cs-run.empty{color:#94a3b8;background:#f8fafc}
 .time-badge{display:inline-flex;align-items:center;justify-content:center;min-width:46px;padding:4px 10px;border-radius:999px;font-weight:950}
 .time-badge.rank1{background:#ffd9cc;color:#7c2d12}.time-badge.rank2{background:#fff1a8;color:#713f12}
+@media(max-width:600px){.kiryu-original-exhibition-table{min-width:500px!important;table-layout:auto!important}.kiryu-original-exhibition-table th,.kiryu-original-exhibition-table td{white-space:nowrap;overflow-wrap:normal}.kiryu-original-exhibition-table .time-badge{min-width:44px;padding-left:8px;padding-right:8px}}
 .slit{
   position:relative;
   height:320px;

@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261104-kiryu-ai";
+const SITE_BUILD = "20261104-kiryu-exhibition-sum";
 
 let manifest = null;
 let currentPayload = null;
@@ -569,6 +569,20 @@ function exhibitionTimeFromRow(row) {
   return null;
 }
 
+function kiryuExhibitionTimeFromRow(row) {
+  if (!row) return null;
+  for (const key of [
+    "exhibition_time", "exhibitionTime", "display_time", "displayTime",
+    "tenji_time", "tenjiTime", "show", "display", "time",
+  ]) {
+    const value = row[key];
+    if (value === undefined || value === null || value === "" || value === "-") continue;
+    const parsed = Number(String(value).trim());
+    if (Number.isFinite(parsed) && parsed >= 5 && parsed < 10) return parsed;
+  }
+  return null;
+}
+
 function positiveNumber(value) {
   if (value === undefined || value === null || value === "" || value === "-") return null;
   const parsed = Number(String(value).trim());
@@ -580,27 +594,32 @@ function mergeOriginalExhibitionRows(existingOriginal, originalEntries, exhibiti
   const originalByLane = Object.fromEntries((originalEntries || []).map((row) => [String(row.lane), row]));
   const exhibitionByLane = Object.fromEntries((exhibitionEntries || []).map((row) => [String(row.lane), row]));
   const merged = {};
+  const isKiryu = currentVenueSlug === "kiryu";
 
   for (let laneNo = 1; laneNo <= 6; laneNo += 1) {
     const key = String(laneNo);
     const previous = current[key] || current[laneNo] || {};
     const original = originalByLane[key] || {};
     const exhibition = exhibitionByLane[key] || {};
-    const exhibitionTime = exhibitionTimeFromRow(exhibition)
-      ?? exhibitionTimeFromRow({ exhibition_time: original.sum_exhibition })
-      ?? exhibitionTimeFromRow(previous);
-    const isKiryu = currentVenueSlug === "kiryu";
+    const exhibitionTimeReader = isKiryu ? kiryuExhibitionTimeFromRow : exhibitionTimeFromRow;
+    const exhibitionTime = exhibitionTimeReader(exhibition)
+      ?? exhibitionTimeReader({ exhibition_time: original.sum_exhibition })
+      ?? exhibitionTimeReader(previous);
     const firstMetric = isKiryu
       ? firstValue(original.half_lap_time, previous.halfLap, previous.half_lap_time)
       : firstValue(original.lap_time, previous.lap);
     const lapNumber = positiveNumber(firstMetric);
     const sourceSum = positiveNumber(original.sum);
-    const calculatedSum = !isKiryu && lapNumber !== null && exhibitionTime !== null
-      ? Math.round((lapNumber + exhibitionTime) * 100) / 100
+    const calculatedSum = lapNumber !== null && exhibitionTime !== null
+      ? (isKiryu
+        ? lapNumber + exhibitionTime
+        : Math.round((lapNumber + exhibitionTime) * 100) / 100)
       : null;
-    const sum = sourceSum !== null
-      ? sourceSum
-      : (calculatedSum !== null ? calculatedSum : firstValue(previous.sum, null));
+    const sum = isKiryu
+      ? calculatedSum
+      : (sourceSum !== null
+        ? sourceSum
+        : (calculatedSum !== null ? calculatedSum : firstValue(previous.sum, null)));
     merged[key] = {
       ...previous,
       ...(isKiryu ? { halfLap: firstMetric } : { lap: firstMetric }),
@@ -617,13 +636,17 @@ function mergeOriginalExhibitionRows(existingOriginal, originalEntries, exhibiti
   const validSums = Object.values(merged)
     .map((row) => positiveNumber(row.sum))
     .filter((value) => value !== null);
-  if (validSums.length) {
+  if (isKiryu && validSums.length !== 6) {
+    for (const row of Object.values(merged)) row.sum_diff = null;
+  } else if (validSums.length) {
     const average = validSums.reduce((total, value) => total + value, 0) / validSums.length;
     for (const row of Object.values(merged)) {
       const sum = positiveNumber(row.sum);
-      row.sum_diff = sum !== null
-        ? (average - sum).toFixed(2)
-        : firstValue(row.sum_diff, row.diff, null);
+      row.sum_diff = isKiryu
+        ? (sum !== null ? sum - average : null)
+        : (sum !== null
+          ? (average - sum).toFixed(2)
+          : firstValue(row.sum_diff, row.diff, null));
     }
   }
   return merged;
@@ -1855,6 +1878,15 @@ function timeBadge(value, cls = "") {
   return `<span class="time-badge ${cls}">${safe(value)}</span>`;
 }
 
+function formatKiryuExhibitionValue(value, signed = false) {
+  if (value === undefined || value === null || value === "") return "—";
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "—";
+  const rounded = Math.sign(parsed) * Math.round((Math.abs(parsed) + 1e-9) * 100) / 100;
+  const fixed = (Object.is(rounded, -0) ? 0 : rounded).toFixed(2);
+  return signed && rounded > 0 ? `+${fixed}` : fixed;
+}
+
 function exhibitionCell(row, status, cls = "") {
   const value = exhibitionTimeFromRow(row);
   if (value !== null) return timeBadge(value.toFixed(2), cls);
@@ -2103,7 +2135,7 @@ function renderRealtime() {
       <div class="note">データが取得済みになると、このタブに自動で反映されます。</div>
     </div>
     <div class="card"><h2>オリジナル展示</h2>
-      ${hasOriginal ? `<div class="table-scroll"><table><tr><th>枠</th><th>${currentVenueSlug === "kiryu" ? "半周タイム" : "1周"}</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
+      ${hasOriginal ? `<div class="table-scroll"><table${currentVenueSlug === "kiryu" ? ' class="kiryu-original-exhibition-table"' : ""}><tr><th>枠</th><th>${currentVenueSlug === "kiryu" ? "半周タイム" : "1周"}</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
         ${[1,2,3,4,5,6].map((n) => {
           const firstMetric = currentVenueSlug === "kiryu"
             ? firstValue(original[n]?.halfLap, original[n]?.half_lap_time)
@@ -2111,7 +2143,17 @@ function renderRealtime() {
           const firstMetricKey = currentVenueSlug === "kiryu"
             ? (original[n]?.halfLap !== undefined ? "halfLap" : "half_lap_time")
             : (original[n]?.lap !== undefined ? "lap" : "lap_time");
-          return `<tr><td>${lane(n)}</td><td>${timeBadge(firstMetric, valueRankClass(original, n, firstMetricKey))}</td><td>${timeBadge(firstValue(original[n]?.turn, original[n]?.turn_time), valueRankClass(original, n, original[n]?.turn !== undefined ? "turn" : "turn_time"))}</td><td>${timeBadge(firstValue(original[n]?.line, original[n]?.straight, original[n]?.straight_time), valueRankClass(original, n, original[n]?.line !== undefined ? "line" : (original[n]?.straight !== undefined ? "straight" : "straight_time")))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, original[n]?.exhibition_time !== undefined ? "exhibition_time" : "sum_exhibition"))}</td><td>${timeBadge(original[n]?.sum, valueRankClass(original, n, "sum"))}</td><td>${safe(firstValue(original[n]?.sum_diff, original[n]?.sum_difference, original[n]?.diff))}</td></tr>`;
+          const isKiryu = currentVenueSlug === "kiryu";
+          const sumValue = isKiryu
+            ? formatKiryuExhibitionValue(original[n]?.sum)
+            : original[n]?.sum;
+          const diffValue = isKiryu
+            ? formatKiryuExhibitionValue(original[n]?.sum_diff, true)
+            : safe(firstValue(original[n]?.sum_diff, original[n]?.sum_difference, original[n]?.diff));
+          const diffCell = isKiryu
+            ? timeBadge(diffValue, valueRankClass(original, n, "sum_diff"))
+            : diffValue;
+          return `<tr><td>${lane(n)}</td><td>${timeBadge(firstMetric, valueRankClass(original, n, firstMetricKey))}</td><td>${timeBadge(firstValue(original[n]?.turn, original[n]?.turn_time), valueRankClass(original, n, original[n]?.turn !== undefined ? "turn" : "turn_time"))}</td><td>${timeBadge(firstValue(original[n]?.line, original[n]?.straight, original[n]?.straight_time), valueRankClass(original, n, original[n]?.line !== undefined ? "line" : (original[n]?.straight !== undefined ? "straight" : "straight_time")))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, original[n]?.exhibition_time !== undefined ? "exhibition_time" : "sum_exhibition"))}</td><td>${timeBadge(sumValue, valueRankClass(original, n, "sum"))}</td><td>${diffCell}</td></tr>`;
         }).join("")}
       </table></div>` : `<div class="note">オリジナル展示はまだ未取得です。</div>`}
     </div>`;
