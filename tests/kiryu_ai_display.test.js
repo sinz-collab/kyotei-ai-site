@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const app = fs.readFileSync('app.js', 'utf8');
 const scores = fs.readFileSync('scores.js', 'utf8');
+const index = fs.readFileSync('index.html', 'utf8');
 
 assert.match(app, /kiryu_independent_6plus4_frozen_20261104/);
 assert.match(app, /\["morning", "live"\]\.includes\(p\.flyPrediction\?\.status\)/);
@@ -14,6 +15,9 @@ assert.match(app, /raceData\?\.predictionPre\?\.flyPrediction/);
 assert.match(app, /race\(\)\?\.predictionPre\?\.flyPrediction/);
 assert.match(app, /kiryuPreFly\.tickets\.map/);
 assert.match(app, /combo: firstValue\(ticket\?\.combo, ticket\?\.combination/);
+assert.match(app, /isKiryuFly && Array\.isArray\(dedicatedFly\?\.tickets\)/);
+assert.match(app, /dedicatedTicketSets\.fly = dedicatedFly\.tickets/);
+assert.match(index, /app\.js\?v=20261105-kiryu-fly-10-display/);
 
 const context={console}; vm.createContext(context);
 vm.runInContext(scores+'\nglobalThis.scoresRowForTest=scoresRow;',context);

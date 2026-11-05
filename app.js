@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261105-kiryu-live-review-fly-tab";
+const SITE_BUILD = "20261105-kiryu-fly-10-display";
 
 let manifest = null;
 let currentPayload = null;
@@ -2422,6 +2422,9 @@ function renderPrediction() {
     ? "danger"
     : (({ "注意": "caution", "警戒": "warning", "危険": "danger" })[lane1FlyLevel] || "normal");
   const dedicatedTicketSets = dedicatedFlyTicketSets(p);
+  if (isKiryuFly && Array.isArray(dedicatedFly?.tickets)) {
+    dedicatedTicketSets.fly = dedicatedFly.tickets;
+  }
   const dedicatedFlyTickets = dedicatedTicketSets.fly;
   const tickets = p[ticketMode] || [];
   const wakamatsuNormalTickets = Array.isArray(p.tickets) ? p.tickets : [];
