@@ -61,6 +61,7 @@ const context = {
     assert.equal(pathname, "venues/kiryu/20261105.json");
     return structuredClone(finalPayload);
   },
+  prepareDeadlineTides() {},
   isVerifiedTokonameFinalPrediction() { return false; },
 };
 vm.createContext(context);
