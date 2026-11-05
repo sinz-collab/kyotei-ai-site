@@ -51,7 +51,7 @@ globalThis.renderRealtimeForTest = renderRealtime;`, context);
 
 assert.match(
   appSource,
-  /\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu"\]\.includes\(currentVenueSlug\)/,
+  /\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu", "kiryu"\]\.includes\(currentVenueSlug\)/,
   "Karatsu must reload its server-generated final prediction payload",
 );
 assert.match(

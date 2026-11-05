@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261105-deadline-tide";
+const SITE_BUILD = "20261105-deadline-tide-kiryu-live";
 
 let manifest = null;
 let currentPayload = null;
@@ -762,12 +762,16 @@ function hasCompletedFinalPrediction(raceData) {
         )
       )
     )
+    || (
+      currentVenueSlug === "kiryu"
+      && finalPrediction?.predictionStage === "live"
+    )
     || isVerifiedTokonameFinalPrediction(raceData?.prediction)
   );
 }
 
 async function refreshWakamatsuVenuePayload() {
-  if (!["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu"].includes(currentVenueSlug) || !currentPayload) return false;
+  if (!["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu", "kiryu"].includes(currentVenueSlug) || !currentPayload) return false;
 
   const venueSlug = currentVenueSlug;
   const payloadDate = currentPayload.date;
@@ -834,7 +838,7 @@ function startLiveRefresh() {
     if (document.hidden || !currentVenueSlug || !currentPayload || refreshInFlight) return;
     refreshInFlight = true;
     try {
-      if (["ashiya", "tokoname", "wakamatsu", "karatsu"].includes(currentVenueSlug) && await refreshSiteBuildIfStale()) return;
+      if (["ashiya", "tokoname", "wakamatsu", "karatsu", "kiryu"].includes(currentVenueSlug) && await refreshSiteBuildIfStale()) return;
       await refreshWakamatsuVenuePayload();
       await loadLiveRace();
       renderPane();
@@ -1153,6 +1157,12 @@ function pred() {
       probabilityReview: legacy.probabilityReview || narutoReview || undefined,
       probabilityReviewStatus: legacy.probabilityReviewStatus
         || (narutoReview ? "reviewed" : undefined),
+      flyPrediction: firstValue(
+        legacy.flyPrediction,
+        raceData?.predictionFinal?.flyPrediction,
+        raceData?.prediction?.flyPrediction,
+        raceData?.predictionPre?.flyPrediction
+      ),
       probabilityFlow: legacy.probabilityFlow || (narutoVerified ? {
         required: true,
         baseApplied: Boolean(narutoReview),
@@ -1244,7 +1254,11 @@ function pred() {
     upsetIndex: source.upsetIndex ?? 0,
     lane1FlyProbability: source.lane1FlyProbability,
     lane1FlyLevel: source.lane1FlyLevel,
-    flyPrediction: source.flyPrediction,
+    flyPrediction: firstValue(
+      source.flyPrediction,
+      raceData?.predictionFinal?.flyPrediction,
+      raceData?.predictionPre?.flyPrediction
+    ),
     readability: source.readability || {},
     attack: source.attack || {},
     logs: source.logs || [],

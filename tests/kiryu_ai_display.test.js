@@ -8,6 +8,9 @@ assert.match(app, /kiryu_independent_6plus4_frozen_20261104/);
 assert.match(app, /\["morning", "live"\]\.includes\(p\.flyPrediction\?\.status\)/);
 assert.match(app, /\["wakamatsu", "naruto", "kiryu"\]/);
 assert.match(app, /currentVenueSlug === "kiryu"[\s\S]*p\.predictionStage === "live"/);
+assert.match(app, /\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu", "kiryu"\]/);
+assert.match(app, /currentVenueSlug === "kiryu"[\s\S]*finalPrediction\?\.predictionStage === "live"/);
+assert.match(app, /raceData\?\.predictionPre\?\.flyPrediction/);
 
 const context={console}; vm.createContext(context);
 vm.runInContext(scores+'\nglobalThis.scoresRowForTest=scoresRow;',context);
