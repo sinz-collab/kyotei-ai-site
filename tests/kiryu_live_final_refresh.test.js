@@ -4,7 +4,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const appSource = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
-const start = appSource.indexOf("function hasCompletedFinalPrediction");
+const start = appSource.indexOf("function isVerifiedKiryuFinalPrediction");
 const end = appSource.indexOf("async function refreshSiteBuildIfStale");
 assert.ok(start >= 0 && end > start, "Kiryu venue refresh helpers must exist");
 
@@ -22,6 +22,23 @@ const preliminary = {
 };
 const final = {
   predictionStage: "live",
+  phase: "final",
+  status: "complete",
+  finalPredictionStatus: "complete",
+  probabilityReviewStatus: "reviewed",
+  probabilityFlow: { realtimeApplied: true, reviewed: true },
+  liveInput: {
+    complete: true,
+    required: ["direct", "exhibition", "original_exhibition"],
+  },
+  probabilityReview: Object.fromEntries(Array.from({ length: 6 }, (_, index) => {
+    const lane = String(index + 1);
+    return [lane, {
+      morningWin: 100 / 6, morningSecond: 100 / 6, morningThird: 100 / 6,
+      win: 100 / 6, second: 100 / 6, third: 100 / 6,
+      deltaWin: 0, deltaSecond: 0, deltaThird: 0,
+    }];
+  })),
   flyPrediction: {
     status: "live",
     modelVersion: "kiryu_independent_6plus4_frozen_20261104",
@@ -57,6 +74,10 @@ const context = {
     }],
   },
   structuredClone,
+  num(value, fallback) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  },
   async fetchJson(pathname) {
     assert.equal(pathname, "venues/kiryu/20261105.json");
     return structuredClone(finalPayload);

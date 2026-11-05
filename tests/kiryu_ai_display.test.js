@@ -7,10 +7,13 @@ const scores = fs.readFileSync('scores.js', 'utf8');
 assert.match(app, /kiryu_independent_6plus4_frozen_20261104/);
 assert.match(app, /\["morning", "live"\]\.includes\(p\.flyPrediction\?\.status\)/);
 assert.match(app, /\["wakamatsu", "naruto", "kiryu"\]/);
-assert.match(app, /currentVenueSlug === "kiryu"[\s\S]*p\.predictionStage === "live"/);
+assert.match(app, /currentVenueSlug === "kiryu"[\s\S]*isVerifiedKiryuFinalPrediction\(p\)/);
 assert.match(app, /\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu", "kiryu"\]/);
-assert.match(app, /currentVenueSlug === "kiryu"[\s\S]*finalPrediction\?\.predictionStage === "live"/);
+assert.match(app, /currentVenueSlug === "kiryu"[\s\S]*isVerifiedKiryuFinalPrediction\(finalPrediction\)/);
 assert.match(app, /raceData\?\.predictionPre\?\.flyPrediction/);
+assert.match(app, /race\(\)\?\.predictionPre\?\.flyPrediction/);
+assert.match(app, /kiryuPreFly\.tickets\.map/);
+assert.match(app, /combo: firstValue\(ticket\?\.combo, ticket\?\.combination/);
 
 const context={console}; vm.createContext(context);
 vm.runInContext(scores+'\nglobalThis.scoresRowForTest=scoresRow;',context);

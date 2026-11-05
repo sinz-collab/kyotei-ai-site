@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261105-deadline-tide-kiryu-live";
+const SITE_BUILD = "20261105-kiryu-live-review-fly-tab";
 
 let manifest = null;
 let currentPayload = null;
@@ -478,6 +478,23 @@ function isVerifiedKaratsuFinalPrediction(prediction) {
       .every((name) => required.has(name));
 }
 
+function isVerifiedKiryuFinalPrediction(prediction) {
+  const required = new Set(Array.isArray(prediction?.liveInput?.required)
+    ? prediction.liveInput.required
+    : []);
+  return prediction?.predictionStage === "live"
+    && prediction?.phase === "final"
+    && prediction?.status === "complete"
+    && prediction?.finalPredictionStatus === "complete"
+    && prediction?.probabilityReviewStatus === "reviewed"
+    && prediction?.probabilityFlow?.realtimeApplied === true
+    && prediction?.probabilityFlow?.reviewed === true
+    && prediction?.liveInput?.complete === true
+    && ["direct", "exhibition", "original_exhibition"]
+      .every((name) => required.has(name))
+    && hasCompleteProbabilityReview(prediction);
+}
+
 function probabilityReviewFromSnapshots(before, after) {
   const positions = ["win", "second", "third"];
   const mapsAreComplete = (prediction) => positions.every((position) => {
@@ -764,7 +781,7 @@ function hasCompletedFinalPrediction(raceData) {
     )
     || (
       currentVenueSlug === "kiryu"
-      && finalPrediction?.predictionStage === "live"
+      && isVerifiedKiryuFinalPrediction(finalPrediction)
     )
     || isVerifiedTokonameFinalPrediction(raceData?.prediction)
   );
@@ -2387,7 +2404,18 @@ function renderPrediction() {
     && ["morning", "live"].includes(p.flyPrediction?.status)
     && p.flyPrediction?.modelVersion === "heiwajima_fly_v6_attack_sum_candidate_20261102";
   const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly || isTokonameFly || isNarutoFly || isKiryuFly || isHeiwajimaFly;
-  const dedicatedFly = isDedicatedFlyVenue ? p.flyPrediction : null;
+  const kiryuPreFly = isKiryuFly ? race()?.predictionPre?.flyPrediction : null;
+  const dedicatedFly = isDedicatedFlyVenue
+    ? (isKiryuFly && Array.isArray(kiryuPreFly?.tickets)
+      ? {
+        ...p.flyPrediction,
+        tickets: kiryuPreFly.tickets.map((ticket) => ({
+          ...ticket,
+          combo: firstValue(ticket?.combo, ticket?.combination, ticket?.ticket, ""),
+        })),
+      }
+      : p.flyPrediction)
+    : null;
   const todaFly = isTodaFly ? dedicatedFly : null;
   const lane1FlyProbability = firstValue(p.lane1FlyProbability, p.flyPrediction?.probability);
   const lane1FlyClass = p.flyPrediction?.isFly
@@ -2413,7 +2441,7 @@ function renderPrediction() {
     : (isBiwakoTickets ? `1号艇飛び予想<span>${(p.aiUpset || []).length}点</span>` : "AI荒れ予想");
   const flow = p.probabilityFlow || {};
   const isFinalStage = currentVenueSlug === "kiryu"
-    ? p.predictionStage === "live"
+    ? isVerifiedKiryuFinalPrediction(p)
     : currentVenueSlug === "naruto"
     ? p.predictionStage === "live"
     : currentVenueSlug === "tokoname"
@@ -2433,7 +2461,9 @@ function renderPrediction() {
       ? isVerifiedKaratsuFinalPrediction(p)
       : (currentVenueSlug === "naruto"
         ? isVerifiedNarutoFinalPrediction(p)
-        : isFinalStage));
+        : (currentVenueSlug === "kiryu"
+          ? isVerifiedKiryuFinalPrediction(p)
+          : isFinalStage)));
   const showDeltas = liveReviewSucceeded && hasCompleteProbabilityReview(p);
   const lane1FlyStageLabel = ["wakamatsu", "naruto", "kiryu"].includes(currentPayload?.venueId)
     || currentPayload?.venueId === "heiwajima"
