@@ -11,7 +11,7 @@ assert.match(
 );
 assert.match(
   appSource,
-  /if \(!\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu"\]\.includes\(currentVenueSlug\) \|\| !currentPayload\) return false;/,
+  /if \(!\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu", "kiryu"\]\.includes\(currentVenueSlug\) \|\| !currentPayload\) return false;/,
   "Venue engines including Karatsu must reload the server-generated final venue payload",
 );
 const start = appSource.indexOf("function normalizeProbabilityMap");

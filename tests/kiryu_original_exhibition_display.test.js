@@ -4,6 +4,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const source = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8").replace(/\r\n?/g, "\n");
+const styles = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8").replace(/\r\n?/g, "\n");
 const start = source.indexOf("function completeSixLaneRows");
 const end = source.indexOf("function rankRows", start);
 assert.ok(start >= 0 && end > start);
@@ -47,9 +48,15 @@ assert.equal(partial.length, 6, "Kiryu must retain rows with individually missin
 
 const original = Object.fromEntries(entries.map((row) => [String(row.lane), row]));
 assert.equal(context.hasOriginalForTest(original, true, null), true);
-assert.match(source, /currentVenueSlug === "kiryu" \? "半周タイム" : "1周"/);
+assert.match(source, /<th>半周<br>タイム<\/th>/);
 assert.match(source, /half_lap_time/);
 assert.doesNotMatch(source, /half_lap_time\s*\*\s*2/);
+assert.match(source, /<th>艇番<\/th><th>選手名<\/th><th>半周<br>タイム<\/th><th>回り足<\/th><th>直線<\/th><th>展示<br>タイム<\/th>/);
+assert.match(source, /class="kiryu-racer-name"/);
+assert.match(styles, /\.kiryu-original-exhibition-table\{table-layout:fixed\}/);
+assert.match(styles, /@media\(max-width:600px\)\{\.kiryu-original-exhibition-wrap\{overflow-x:hidden\}/);
+assert.match(styles, /\.kiryu-original-exhibition-table\{min-width:0!important;font-size:10px\}/);
+assert.match(styles, /\.kiryu-original-exhibition-table \.time-badge\{min-width:0;width:100%;/);
 
 context.currentVenueSlug = "heiwajima";
 assert.equal(

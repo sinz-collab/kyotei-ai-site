@@ -6,7 +6,7 @@ const vm = require("node:vm");
 const app = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 const css = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");
 
-assert.match(app, /flyPrediction: source\.flyPrediction/);
+assert.match(app, /flyPrediction: firstValue\(\s*source\.flyPrediction/);
 assert.match(app, /\["pre", "final"\]\.includes\(p\.flyPrediction\?\.status\)/);
 assert.match(app, /dedicatedFlyTicketSets\(p\)/);
 assert.match(app, /1号艇飛び確率/);

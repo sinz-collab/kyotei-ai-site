@@ -6,7 +6,7 @@ const app = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 
 assert.match(
   app,
-  /\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu"\]\.includes\(currentVenueSlug\)/,
+  /\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu", "kiryu"\]\.includes\(currentVenueSlug\)/,
   "Tokoname must reload its venue payload after final predictions are published",
 );
 assert.match(

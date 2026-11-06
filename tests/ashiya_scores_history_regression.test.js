@@ -5,7 +5,7 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'scores.js'), 'utf8');
 const index = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-assert.match(index, /scores\.js\?v=20261104-kiryu-exhibition-sum/);
+assert.match(index, /scores\.js\?v=20261107-kiryu-mobile-display/);
 const calls = [];
 const finalSnapshot = {
   stage: 'live',

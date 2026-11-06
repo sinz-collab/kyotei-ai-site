@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261106-kiryu-variable-fly";
+const SITE_BUILD = "20261107-kiryu-mobile-display";
 
 let manifest = null;
 let currentPayload = null;
@@ -89,6 +89,12 @@ const lane1FlyProbabilityText = (v) => {
 };
 
 const narutoFlyProbabilityText = (v) => {
+  if (v === undefined || v === null || v === "") return "—";
+  const value = Number(v);
+  return Number.isFinite(value) ? `${value.toFixed(2)}%` : "—";
+};
+
+const kiryuFlyProbabilityText = (v) => {
   if (v === undefined || v === null || v === "") return "—";
   const value = Number(v);
   return Number.isFinite(value) ? `${value.toFixed(2)}%` : "—";
@@ -2135,6 +2141,7 @@ function renderSlit(realtime) {
 function renderRealtime() {
   const p = pred();
   const rt = race().live || p.realtime || {};
+  const racerNames = Object.fromEntries((race().racers || []).map((racer) => [Number(racer.lane), racer.name]));
   const embeddedExhibition = currentVenueSlug === "karatsu" ? rt.exhibition?.entries : null;
   const last = rowMap(rt.last || rt.lastMinute || rt.before || rt.direct || embeddedExhibition);
   const embeddedOriginal = currentVenueSlug === "karatsu" && Array.isArray(rt.original?.entries) ? rt.original.entries : null;
@@ -2168,7 +2175,7 @@ function renderRealtime() {
       <div class="note">データが取得済みになると、このタブに自動で反映されます。</div>
     </div>
     <div class="card"><h2>オリジナル展示</h2>
-      ${hasOriginal ? `<div class="table-scroll"><table${currentVenueSlug === "kiryu" ? ' class="kiryu-original-exhibition-table"' : ""}><tr><th>枠</th><th>${currentVenueSlug === "kiryu" ? "半周タイム" : "1周"}</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
+      ${hasOriginal ? `<div class="table-scroll${currentVenueSlug === "kiryu" ? " kiryu-original-exhibition-wrap" : ""}"><table${currentVenueSlug === "kiryu" ? ' class="kiryu-original-exhibition-table"' : ""}>${currentVenueSlug === "kiryu" ? '<colgroup><col class="kiryu-boat-col"><col class="kiryu-name-col"><col span="4" class="kiryu-time-col"></colgroup><tr><th>艇番</th><th>選手名</th><th>半周<br>タイム</th><th>回り足</th><th>直線</th><th>展示<br>タイム</th></tr>' : '<tr><th>枠</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>'}
         ${[1,2,3,4,5,6].map((n) => {
           const firstMetric = currentVenueSlug === "kiryu"
             ? firstValue(original[n]?.halfLap, original[n]?.half_lap_time)
@@ -2186,7 +2193,10 @@ function renderRealtime() {
           const diffCell = isKiryu
             ? timeBadge(diffValue, valueRankClass(original, n, "sum_diff"))
             : diffValue;
-          return `<tr><td>${lane(n)}</td><td>${timeBadge(firstMetric, valueRankClass(original, n, firstMetricKey))}</td><td>${timeBadge(firstValue(original[n]?.turn, original[n]?.turn_time), valueRankClass(original, n, original[n]?.turn !== undefined ? "turn" : "turn_time"))}</td><td>${timeBadge(firstValue(original[n]?.line, original[n]?.straight, original[n]?.straight_time), valueRankClass(original, n, original[n]?.line !== undefined ? "line" : (original[n]?.straight !== undefined ? "straight" : "straight_time")))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, original[n]?.exhibition_time !== undefined ? "exhibition_time" : "sum_exhibition"))}</td><td>${timeBadge(sumValue, valueRankClass(original, n, "sum"))}</td><td>${diffCell}</td></tr>`;
+          const metricCells = `<td>${timeBadge(firstMetric, valueRankClass(original, n, firstMetricKey))}</td><td>${timeBadge(firstValue(original[n]?.turn, original[n]?.turn_time), valueRankClass(original, n, original[n]?.turn !== undefined ? "turn" : "turn_time"))}</td><td>${timeBadge(firstValue(original[n]?.line, original[n]?.straight, original[n]?.straight_time), valueRankClass(original, n, original[n]?.line !== undefined ? "line" : (original[n]?.straight !== undefined ? "straight" : "straight_time")))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, original[n]?.exhibition_time !== undefined ? "exhibition_time" : "sum_exhibition"))}</td>`;
+          return isKiryu
+            ? `<tr><td>${lane(n)}</td><td class="kiryu-racer-name">${safe(racerNames[n])}</td>${metricCells}</tr>`
+            : `<tr><td>${lane(n)}</td>${metricCells}<td>${timeBadge(sumValue, valueRankClass(original, n, "sum"))}</td><td>${diffCell}</td></tr>`;
         }).join("")}
       </table></div>` : `<div class="note">オリジナル展示はまだ未取得です。</div>`}
     </div>`;
@@ -2520,9 +2530,11 @@ function renderPrediction() {
         : `<div class="note">現在は前データでの仮予想です。展示・スリット・直前情報が入り、再精査済みになると上段に修正後、下段に修正前を表示します。</div>`));
   const lane1FlyProbabilityValue = currentPayload?.venueId === "naruto"
     ? narutoFlyProbabilityText(lane1FlyProbability)
+    : (currentPayload?.venueId === "kiryu"
+      ? kiryuFlyProbabilityText(lane1FlyProbability)
     : (currentPayload?.venueId === "ashiya"
       ? pct1(lane1FlyProbability)
-      : lane1FlyProbabilityText(lane1FlyProbability));
+      : lane1FlyProbabilityText(lane1FlyProbability)));
   const flyProbabilityCard = `<div class="probcard lane1-fly ${lane1FlyClass}" title="${lane1FlyLevel}"><span>1号艇飛び確率${lane1FlyStageLabel ? ` <small>${lane1FlyStageLabel}</small>` : ""}</span><b>${lane1FlyProbabilityValue}</b>${todaFly ? `<em>${todaFly.isFly ? "飛び優勢" : "逃げ優勢"}</em>` : ""}</div>`;
   const ticketSection = `<div class="card toda-normal-tickets${usesFlyTicketTabs ? " wakamatsu-tickets" : ""}"><h2>買い目</h2>
     <div class="mode ${usesFlyTicketTabs ? "wakamatsu-fly-mode" : ""}"><button class="${ticketMode === "ai" ? "active" : ""}" onclick="selectTicketMode('ai')">${aiModeLabel}</button><button class="${ticketMode === "aiUpset" ? "active" : ""}" onclick="selectTicketMode('aiUpset')">${upsetModeLabel}</button></div>

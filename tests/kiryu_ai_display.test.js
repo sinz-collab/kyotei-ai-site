@@ -17,7 +17,7 @@ assert.match(app, /kiryuPreFly\.tickets\.map/);
 assert.match(app, /combo: firstValue\(ticket\?\.combo, ticket\?\.combination/);
 assert.match(app, /isKiryuFly && Array\.isArray\(dedicatedFly\?\.tickets\)/);
 assert.match(app, /dedicatedTicketSets\.fly = dedicatedFly\.tickets/);
-assert.match(index, /app\.js\?v=20261106-kiryu-variable-fly/);
+assert.match(index, /app\.js\?v=20261107-kiryu-mobile-display/);
 
 const context={console}; vm.createContext(context);
 vm.runInContext(scores+'\nglobalThis.scoresRowForTest=scoresRow;',context);
