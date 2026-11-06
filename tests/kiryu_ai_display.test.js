@@ -5,7 +5,7 @@ const app = fs.readFileSync('app.js', 'utf8');
 const scores = fs.readFileSync('scores.js', 'utf8');
 const index = fs.readFileSync('index.html', 'utf8');
 
-assert.match(app, /kiryu_independent_6plus4_frozen_20261104/);
+assert.match(app, /kiryu_independent_variable_20261106/);
 assert.match(app, /\["morning", "live"\]\.includes\(p\.flyPrediction\?\.status\)/);
 assert.match(app, /\["wakamatsu", "naruto", "kiryu"\]/);
 assert.match(app, /currentVenueSlug === "kiryu"[\s\S]*isVerifiedKiryuFinalPrediction\(p\)/);
@@ -17,7 +17,7 @@ assert.match(app, /kiryuPreFly\.tickets\.map/);
 assert.match(app, /combo: firstValue\(ticket\?\.combo, ticket\?\.combination/);
 assert.match(app, /isKiryuFly && Array\.isArray\(dedicatedFly\?\.tickets\)/);
 assert.match(app, /dedicatedTicketSets\.fly = dedicatedFly\.tickets/);
-assert.match(index, /app\.js\?v=20261105-kiryu-fly-10-display/);
+assert.match(index, /app\.js\?v=20261106-kiryu-variable-fly/);
 
 const context={console}; vm.createContext(context);
 vm.runInContext(scores+'\nglobalThis.scoresRowForTest=scoresRow;',context);

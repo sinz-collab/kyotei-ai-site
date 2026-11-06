@@ -16,7 +16,7 @@ const preliminary = {
   predictionStage: "morning",
   flyPrediction: {
     status: "morning",
-    modelVersion: "kiryu_independent_6plus4_frozen_20261104",
+    modelVersion: "kiryu_independent_variable_20261106",
     tickets: flyTickets,
   },
 };
@@ -41,7 +41,7 @@ const final = {
   })),
   flyPrediction: {
     status: "live",
-    modelVersion: "kiryu_independent_6plus4_frozen_20261104",
+    modelVersion: "kiryu_independent_variable_20261106",
     tickets: flyTickets,
   },
 };

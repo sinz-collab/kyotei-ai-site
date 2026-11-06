@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261105-kiryu-fly-10-display";
+const SITE_BUILD = "20261106-kiryu-variable-fly";
 
 let manifest = null;
 let currentPayload = null;
@@ -2399,7 +2399,7 @@ function renderPrediction() {
     && String(p.flyPrediction?.modelVersion || "").startsWith("naruto_");
   const isKiryuFly = currentPayload?.venueId === "kiryu"
     && ["morning", "live"].includes(p.flyPrediction?.status)
-    && p.flyPrediction?.modelVersion === "kiryu_independent_6plus4_frozen_20261104";
+    && p.flyPrediction?.modelVersion === "kiryu_independent_variable_20261106";
   const isHeiwajimaFly = currentPayload?.venueId === "heiwajima"
     && ["morning", "live"].includes(p.flyPrediction?.status)
     && p.flyPrediction?.modelVersion === "heiwajima_fly_v6_attack_sum_candidate_20261102";
