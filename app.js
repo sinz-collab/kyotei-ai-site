@@ -1456,7 +1456,7 @@ function finishClass(finish) {
   if (/^[12]/.test(f)) return "good";
   if (/^[34]/.test(f)) return "mid";
   if (/^[56]/.test(f)) return "bad";
-  if (/[転妨失欠ＦFエ]/.test(f)) return "trouble";
+  if (/[転妨落失不欠ＦFＬLエ沈]/.test(f)) return "trouble";
   return "";
 }
 
