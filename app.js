@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261107-kiryu-mobile-display";
+const SITE_BUILD = "20261113-karatsu-fly-tabs";
 
 let manifest = null;
 let currentPayload = null;
@@ -81,6 +81,20 @@ function dedicatedFlyTicketSets(prediction) {
     normal,
     fly: Array.isArray(prediction?.flyPrediction?.tickets) ? prediction.flyPrediction.tickets : [],
   };
+}
+
+function uniqueTicketsByCombo(rows) {
+  return (Array.isArray(rows) ? rows : []).filter((ticket, index, tickets) => {
+    const combo = typeof ticket === "string"
+      ? ticket
+      : String(ticket?.combo || ticket?.combination || ticket?.ticket || "");
+    return combo && tickets.findIndex((candidate) => {
+      const candidateCombo = typeof candidate === "string"
+        ? candidate
+        : String(candidate?.combo || candidate?.combination || candidate?.ticket || "");
+      return candidateCombo === combo;
+    }) === index;
+  });
 }
 
 const lane1FlyProbabilityText = (v) => {
@@ -2413,7 +2427,10 @@ function renderPrediction() {
   const isHeiwajimaFly = currentPayload?.venueId === "heiwajima"
     && ["morning", "live"].includes(p.flyPrediction?.status)
     && p.flyPrediction?.modelVersion === "heiwajima_fly_v6_attack_sum_candidate_20261102";
-  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly || isTokonameFly || isNarutoFly || isKiryuFly || isHeiwajimaFly;
+  const isKaratsuFly = currentPayload?.venueId === "karatsu"
+    && p.flyPrediction?.status === "complete"
+    && p.flyPrediction?.modelVersion === "karatsu_lane1_fly_v1";
+  const isDedicatedFlyVenue = isTodaFly || isFukuokaFly || isAshiyaFly || isTokonameFly || isNarutoFly || isKiryuFly || isHeiwajimaFly || isKaratsuFly;
   const kiryuPreFly = isKiryuFly ? race()?.predictionPre?.flyPrediction : null;
   const dedicatedFly = isDedicatedFlyVenue
     ? (isKiryuFly && Array.isArray(kiryuPreFly?.tickets)
@@ -2434,6 +2451,10 @@ function renderPrediction() {
   const dedicatedTicketSets = dedicatedFlyTicketSets(p);
   if (isKiryuFly && Array.isArray(dedicatedFly?.tickets)) {
     dedicatedTicketSets.fly = dedicatedFly.tickets;
+  }
+  if (isKaratsuFly) {
+    dedicatedTicketSets.normal = uniqueTicketsByCombo(p.normalTickets);
+    dedicatedTicketSets.fly = uniqueTicketsByCombo(p.flyPrediction?.tickets);
   }
   const dedicatedFlyTickets = dedicatedTicketSets.fly;
   const tickets = p[ticketMode] || [];

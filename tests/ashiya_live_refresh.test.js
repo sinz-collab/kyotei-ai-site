@@ -62,6 +62,7 @@ const context = {
     return { ok: true, async text() { return 'var build = "test-build";'; } };
   },
   async loadLiveRace() { liveLoadCount += 1; },
+  prepareDeadlineTides() {},
   renderPane() { renderCount += 1; },
   setInterval(callback, milliseconds) {
     assert.equal(milliseconds, 60 * 1000);
