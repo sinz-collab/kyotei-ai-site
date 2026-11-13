@@ -2528,22 +2528,10 @@ function renderPrediction() {
     return `<span class="prob-delta ${v > 0 ? "up" : "down"}">${v > 0 ? "+" : ""}${v.toFixed(1)}${unit}</span>`;
   };
   const probCell = (n, currentMap, review, valueKey, morningKey, deltaKey) => {
-    const baseValue = review?.[morningKey]
-      ?? (currentVenueSlug === "wakamatsu" && isFinalStage
-        ? undefined
-        : (currentMap?.[n] ?? currentMap?.[String(n)]));
+    const baseValue = review?.[morningKey] ?? currentMap?.[n] ?? currentMap?.[String(n)];
     const adjustedValue = review?.[valueKey] ?? currentMap?.[n] ?? currentMap?.[String(n)];
     if (showDeltas) {
-      if (currentVenueSlug === "wakamatsu") {
-        if (!Number.isFinite(num(baseValue, NaN)) || !Number.isFinite(num(adjustedValue, NaN))) {
-          return `<span class="adjusted-prob pending">データなし</span>`;
-        }
-        return `<span class="prob-comparison"><span><small>朝</small> ${pct1(baseValue)}</span><i>→</i><b><small>LIVE</small> ${pct1(adjustedValue)}</b>${delta(review, deltaKey)}</span>`;
-      }
       return `<b>${pct1(adjustedValue)}${delta(review, deltaKey)}</b><span class="adjusted-prob">修正前 ${pct1(baseValue)}</span>`;
-    }
-    if (currentVenueSlug === "wakamatsu" && isFinalStage) {
-      return `<span class="adjusted-prob pending">データなし</span>`;
     }
     const comparisonLabel = isFinalStage ? "修正前データなし" : "修正前対象外";
     return `<b>${pct1(baseValue)}</b><span class="adjusted-prob pending">${comparisonLabel}</span>`;

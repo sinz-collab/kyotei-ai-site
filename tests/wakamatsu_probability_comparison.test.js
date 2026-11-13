@@ -36,10 +36,10 @@ assert.equal(context.reviewIsComplete({
 }), true);
 
 assert.match(app, /currentVenueSlug === "wakamatsu" && useFinalPrediction && prePrediction/);
-assert.match(app, /<small>朝<\/small>[\s\S]*→[\s\S]*<small>LIVE<\/small>/);
 assert.match(app, /const unit = currentVenueSlug === "wakamatsu" \? "pt" : ""/);
 assert.match(app, /±0\.0\$\{unit\}/);
 assert.match(app, /\$\{v\.toFixed\(1\)\}\$\{unit\}/);
-assert.match(app, /adjusted-prob pending">データなし/);
+assert.match(app, /<b>\$\{pct1\(adjustedValue\)\}\$\{delta\(review, deltaKey\)\}<\/b><span class="adjusted-prob">修正前 \$\{pct1\(baseValue\)\}<\/span>/);
+assert.doesNotMatch(app, /class="prob-comparison"/);
 
-console.log("Wakamatsu morning-to-LIVE probability comparison contract passed");
+console.log("Wakamatsu Tokoname-style probability comparison contract passed");
