@@ -964,10 +964,13 @@ function renderTop(now = Date.now()) {
   $("venueGrid").innerHTML = (manifest.venues || []).map((v) => {
     const eventLabel = `<b>${esc(v.eventDayLabel || "開催日目不明")}</b>`;
     const rawSpecialEventLabel = String(v.eventLabel || "");
-    const gradeMatch = rawSpecialEventLabel.match(/^(SG|G[123])(?=$|｜)/);
+    const gradeMatch = rawSpecialEventLabel.match(/^((?:SG|G[123])(?:・(?:SG|G[123]))*)(?=$|｜)/);
+    const gradeBadges = gradeMatch
+      ? gradeMatch[1].split("・").map((grade) => `<span class="venue-event-grade ${grade === "SG" ? "sg" : "g"}">${esc(grade)}</span>`).join("・")
+      : "";
     const specialEventLabel = rawSpecialEventLabel
       ? gradeMatch
-        ? `<strong class="venue-event-label"><span class="venue-event-grade ${gradeMatch[1] === "SG" ? "sg" : "g"}">${esc(gradeMatch[1])}</span>${esc(rawSpecialEventLabel.slice(gradeMatch[1].length))}</strong>`
+        ? `<strong class="venue-event-label">${gradeBadges}${esc(rawSpecialEventLabel.slice(gradeMatch[1].length))}</strong>`
         : `<strong class="venue-event-label">${esc(rawSpecialEventLabel)}</strong>`
       : "";
     const schedule = v.open ? venueScheduleState(v, now) : null;
