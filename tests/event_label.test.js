@@ -39,6 +39,7 @@ for (const label of ["🔰", "♥️"]) {
 }
 assert.match(render("G3｜♥️"), /<span class="venue-event-grade g">G3<\/span>｜♥️<\/strong><span>開催<\/span>/);
 assert.match(render("G1｜🔰"), /<span class="venue-event-grade g">G1<\/span>｜🔰<\/strong><span>開催<\/span>/);
+assert.match(render("SG・G2"), /<span class="venue-event-grade sg">SG<\/span>・<span class="venue-event-grade g">G2<\/span><\/strong><span>開催<\/span>/);
 
 assert.match(styles, /\.venue-event-grade\.sg\{background:#dc2626\}/);
 assert.match(styles, /\.venue-event-grade\.g\{background:#ea580c\}/);
