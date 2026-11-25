@@ -65,7 +65,7 @@ const context = {
   prepareDeadlineTides() {},
   renderPane() { renderCount += 1; },
   setInterval(callback, milliseconds) {
-    assert.equal(milliseconds, 60 * 1000);
+    assert.equal(milliseconds, 30 * 1000);
     intervalCallback = callback;
     return 1;
   },
@@ -104,7 +104,7 @@ vm.runInContext(
   assert.equal(liveLoadCount, 1);
   assert.equal(renderCount, 1);
   assert.equal(syncState.textContent, "LIVE JSON");
-  console.log("Ashiya live payload refreshes every minute without stale cache");
+  console.log("Ashiya live payload refreshes every 30 seconds without stale cache");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

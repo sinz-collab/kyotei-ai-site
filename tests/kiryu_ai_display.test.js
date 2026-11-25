@@ -9,7 +9,7 @@ assert.match(app, /kiryu_independent_variable_20261106/);
 assert.match(app, /\["morning", "live"\]\.includes\(p\.flyPrediction\?\.status\)/);
 assert.match(app, /\["wakamatsu", "naruto", "kiryu"\]/);
 assert.match(app, /currentVenueSlug === "kiryu"[\s\S]*isVerifiedKiryuFinalPrediction\(p\)/);
-assert.match(app, /\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu", "kiryu"\]/);
+assert.match(app, /if \(!currentVenueSlug \|\| !currentPayload\) return false/);
 assert.match(app, /currentVenueSlug === "kiryu"[\s\S]*isVerifiedKiryuFinalPrediction\(finalPrediction\)/);
 assert.match(app, /raceData\?\.predictionPre\?\.flyPrediction/);
 assert.match(app, /race\(\)\?\.predictionPre\?\.flyPrediction/);
@@ -17,7 +17,7 @@ assert.match(app, /kiryuPreFly\.tickets\.map/);
 assert.match(app, /combo: firstValue\(ticket\?\.combo, ticket\?\.combination/);
 assert.match(app, /isKiryuFly && Array\.isArray\(dedicatedFly\?\.tickets\)/);
 assert.match(app, /dedicatedTicketSets\.fly = dedicatedFly\.tickets/);
-assert.match(index, /app\.js\?v=20261113-wakamatsu-probability-display/);
+assert.match(index, /app\.js\?v=20261125-live-refresh-speed/);
 
 const context={console}; vm.createContext(context);
 vm.runInContext(scores+'\nglobalThis.scoresRowForTest=scoresRow;',context);

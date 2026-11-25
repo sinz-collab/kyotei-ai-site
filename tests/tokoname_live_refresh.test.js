@@ -6,8 +6,8 @@ const app = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 
 assert.match(
   app,
-  /\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu", "kiryu"\]\.includes\(currentVenueSlug\)/,
-  "Tokoname must reload its venue payload after final predictions are published",
+  /if \(!currentVenueSlug \|\| !currentPayload\) return false/,
+  "All venues, including Tokoname, must reload their payload after LIVE publishing",
 );
 assert.match(
   app,
@@ -16,8 +16,8 @@ assert.match(
 );
 assert.match(
   app,
-  /\["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu", "kiryu"\]\.includes\(currentVenueSlug\)[\s\S]*?\? 60 \* 1000/,
-  "Tokoname final prediction refresh must run every minute",
+  /const refreshInterval = 30 \* 1000/,
+  "Tokoname final prediction refresh must run every 30 seconds",
 );
 
-console.log("Tokoname verified final predictions refresh every minute");
+console.log("Tokoname verified final predictions refresh every 30 seconds");

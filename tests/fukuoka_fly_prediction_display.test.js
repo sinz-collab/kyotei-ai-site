@@ -7,8 +7,8 @@ const app = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 
 assert.match(
   app,
-  /\["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu", "kiryu"\]\.includes\(currentVenueSlug\)[\s\S]*?\? 60 \* 1000[\s\S]*?: 4 \* 60 \* 1000/,
-  "Venue-specific live displays including Karatsu must refresh every minute without changing other venues",
+  /const refreshInterval = 30 \* 1000/,
+  "Every venue must refresh LIVE data every 30 seconds",
 );
 const css = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");
 

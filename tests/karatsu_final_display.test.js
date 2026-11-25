@@ -51,13 +51,13 @@ globalThis.renderRealtimeForTest = renderRealtime;`, context);
 
 assert.match(
   appSource,
-  /\["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu", "kiryu"\]\.includes\(currentVenueSlug\)/,
+  /if \(!currentVenueSlug \|\| !currentPayload\) return false/,
   "Karatsu must reload its server-generated final prediction payload",
 );
 assert.match(
   appSource,
-  /\["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu", "kiryu"\]\.includes\(currentVenueSlug\)/,
-  "Karatsu must refresh live payloads every minute",
+  /const refreshInterval = 30 \* 1000/,
+  "Karatsu must refresh live payloads every 30 seconds",
 );
 
 const probabilities = (offset = 0) => ({

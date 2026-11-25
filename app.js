@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261113-wakamatsu-probability-display";
+const SITE_BUILD = "20261125-live-refresh-speed";
 
 let manifest = null;
 let currentPayload = null;
@@ -21,6 +21,7 @@ let currentPane = "entry";
 let currentPredictionAvailable = true;
 let ticketMode = "ai";
 let liveRefreshTimer = null;
+let currentVenuePayloadFreshness = null;
 const betBuilderStates = new Map();
 let topClockTimer = null;
 
@@ -162,6 +163,63 @@ function dataUrls(path) {
   return DATA_BASES.map((base) => `${base}/${cleanPath}?t=${Date.now()}`);
 }
 
+const JSON_RETRY_DELAY_MS = 1500;
+const acceptedJsonByPath = new Map();
+
+function cloneJson(value) {
+  return value == null ? value : JSON.parse(JSON.stringify(value));
+}
+
+function jsonFreshness(value) {
+  const documentDate = /^\d{4}-\d{2}-\d{2}$/.test(String(value?.date || ""))
+    ? Date.parse(`${value.date}T00:00:00Z`)
+    : 0;
+  let latestTimestamp = 0;
+  let completionScore = 0;
+  const visit = (item, key = "") => {
+    if (Array.isArray(item)) {
+      item.forEach((entry) => visit(entry, key));
+      return;
+    }
+    if (item && typeof item === "object") {
+      Object.entries(item).forEach(([childKey, child]) => visit(child, childKey));
+      return;
+    }
+    if (typeof item === "string" && /^\d{4}-\d{2}-\d{2}T/.test(item)) {
+      const timestamp = Date.parse(item);
+      if (Number.isFinite(timestamp)) latestTimestamp = Math.max(latestTimestamp, timestamp);
+    }
+    if (item === true && /^(complete|completed|liveApplied|realtimeApplied|reviewed)$/i.test(key)) {
+      completionScore += 1;
+    }
+    if (typeof item === "string") {
+      if (/^(complete|completed|ready|reviewed)$/i.test(item)) completionScore += 1;
+      if (/^(final|live)$/i.test(item) && /(stage|phase)/i.test(key)) completionScore += 2;
+    }
+  };
+  visit(value);
+  return [documentDate, completionScore, latestTimestamp];
+}
+
+function compareJsonFreshness(left, right) {
+  const leftKey = jsonFreshness(left);
+  const rightKey = jsonFreshness(right);
+  return leftKey[0] - rightKey[0]
+    || leftKey[1] - rightKey[1]
+    || leftKey[2] - rightKey[2];
+}
+
+function acceptFreshJson(path, candidate) {
+  const cleanPath = String(path).replace(/^\//, "");
+  const previous = acceptedJsonByPath.get(cleanPath);
+  if (!previous || compareJsonFreshness(candidate, previous) > 0) {
+    acceptedJsonByPath.set(cleanPath, cloneJson(candidate));
+  }
+  return cloneJson(acceptedJsonByPath.get(cleanPath));
+}
+
+const waitForJsonRetry = () => new Promise((resolve) => setTimeout(resolve, JSON_RETRY_DELAY_MS));
+
 function lane(n) {
   const colors = {
     1: ["#fff", "#111", "#d1d5db"],
@@ -212,7 +270,7 @@ function boatColor(n) {
   }[Number(n)] || "#64748b";
 }
 
-async function fetchJson(path) {
+async function fetchJsonOnce(path) {
   let lastError = null;
   for (const url of dataUrls(path)) {
     try {
@@ -229,7 +287,18 @@ async function fetchJson(path) {
   throw lastError || new Error(`failed to load ${path}`);
 }
 
-async function fetchLiveJson(path) {
+async function fetchJson(path) {
+  const cleanPath = String(path).replace(/^\//, "");
+  const previous = acceptedJsonByPath.get(cleanPath);
+  let candidate = await fetchJsonOnce(path);
+  if (previous && compareJsonFreshness(candidate, previous) <= 0) {
+    await waitForJsonRetry();
+    candidate = await fetchJsonOnce(path);
+  }
+  return acceptFreshJson(cleanPath, candidate);
+}
+
+async function fetchLiveJsonOnce(path) {
   let lastError = null;
   const cleanPath = String(path).replace(/^\//, "");
   for (const base of LIVE_DATA_BASES) {
@@ -247,6 +316,19 @@ async function fetchLiveJson(path) {
   }
   if (lastError) throw lastError;
   return null;
+}
+
+async function fetchLiveJson(path) {
+  const cachePath = `live/${String(path).replace(/^\//, "")}`;
+  const previous = acceptedJsonByPath.get(cachePath);
+  let candidate = await fetchLiveJsonOnce(path);
+  if (candidate == null) return previous ? cloneJson(previous) : null;
+  if (previous && compareJsonFreshness(candidate, previous) <= 0) {
+    await waitForJsonRetry();
+    candidate = await fetchLiveJsonOnce(path);
+    if (candidate == null) return cloneJson(previous);
+  }
+  return acceptFreshJson(cachePath, candidate);
 }
 
 function validLiveDocument(document, itemType) {
@@ -808,7 +890,7 @@ function hasCompletedFinalPrediction(raceData) {
 }
 
 async function refreshWakamatsuVenuePayload() {
-  if (!["ashiya", "wakamatsu", "fukuoka", "tokoname", "karatsu", "kiryu"].includes(currentVenueSlug) || !currentPayload) return false;
+  if (!currentVenueSlug || !currentPayload) return false;
 
   const venueSlug = currentVenueSlug;
   const payloadDate = currentPayload.date;
@@ -820,16 +902,23 @@ async function refreshWakamatsuVenuePayload() {
   const complete = races.length === 12 && races.every((raceData) =>
     Array.isArray(raceData.racers) && raceData.racers.length === 6
   );
-  const hasFinal = venueSlug === "ashiya" || races.some(hasCompletedFinalPrediction);
+  const previousFreshness = typeof currentVenuePayloadFreshness === "undefined"
+    ? currentPayload
+    : currentVenuePayloadFreshness;
 
-  // Do not let a response from an old venue/date replace a view opened while fetching.
+  // Do not let an old response replace a view opened while fetching, or roll
+  // a completed LIVE stage back to an earlier GitHub Raw response.
   if (
     currentVenueSlug !== venueSlug
     || currentPayload?.date !== payloadDate
     || latestPayload.date !== payloadDate
     || latestPayload.date !== venue.date
     || !complete
-    || !hasFinal
+    || (
+      previousFreshness
+      && typeof compareJsonFreshness === "function"
+      && compareJsonFreshness(latestPayload, previousFreshness) <= 0
+    )
   ) return false;
 
   const previousRaces = new Map(
@@ -846,6 +935,9 @@ async function refreshWakamatsuVenuePayload() {
   latestPayload.eventDay = latestPayload.eventDay || venue.eventDay || "";
   prepareDeadlineTides(latestPayload);
   currentPayload = latestPayload;
+  if (typeof currentVenuePayloadFreshness !== "undefined") {
+    currentVenuePayloadFreshness = cloneJson(latestPayload);
+  }
   return true;
 }
 
@@ -868,9 +960,7 @@ async function refreshSiteBuildIfStale() {
 function startLiveRefresh() {
   if (liveRefreshTimer) clearInterval(liveRefreshTimer);
   let refreshInFlight = false;
-  const refreshInterval = ["ashiya", "fukuoka", "tokoname", "wakamatsu", "karatsu", "kiryu"].includes(currentVenueSlug)
-    ? 60 * 1000
-    : 4 * 60 * 1000;
+  const refreshInterval = 30 * 1000;
   liveRefreshTimer = setInterval(async () => {
     if (document.hidden || !currentVenueSlug || !currentPayload || refreshInFlight) return;
     refreshInFlight = true;
@@ -1011,6 +1101,7 @@ async function openVenue(slug, route = {}) {
   const v = manifest.venues.find((x) => x.slug === slug);
   if (!v || !v.open || Number(v.entryCount) !== 12 || !v.dataPath) {
     currentPayload = null;
+    currentVenuePayloadFreshness = null;
     currentVenueSlug = "";
     showView("top");
     history.replaceState(null, "", `${location.pathname}${location.search}`);
@@ -1026,6 +1117,7 @@ async function openVenue(slug, route = {}) {
     throw new Error(`公開データ検証エラー: ${v.name}`);
   }
   currentPayload = payload;
+  currentVenuePayloadFreshness = cloneJson(payload);
   currentVenueSlug = slug;
   ticketMode = "ai";
   currentPredictionAvailable = (
