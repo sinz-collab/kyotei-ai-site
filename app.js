@@ -2518,7 +2518,9 @@ function renderPrediction() {
     && p.flyPrediction?.modelVersion === "strength_25_frozen";
   const isTokonameFly = currentPayload?.venueId === "tokoname"
     && ["waiting", "complete", "unavailable"].includes(p.flyPrediction?.status)
-    && p.flyPrediction?.modelVersion === "tokoname_fly_tickets_v4";
+    && ["tokoname_fly_tickets_v4", "tokoname_fly_tickets_v5"].includes(
+      p.flyPrediction?.modelVersion,
+    );
   const isWakamatsuFly = currentPayload?.venueId === "wakamatsu"
     && p.flyPrediction?.modelVersion === "wakamatsu_fly_tickets_v1";
   const isNarutoFly = currentPayload?.venueId === "naruto"
