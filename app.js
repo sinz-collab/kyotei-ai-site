@@ -2806,6 +2806,27 @@ function formatMoney(value) {
   return `${Math.round(num(value, 0)).toLocaleString("ja-JP")}円`;
 }
 
+function combinedBetOdds(tickets, oddsLookup = currentTrifectaOdds) {
+  const active = tickets.filter((ticket) => ticket.amount > 0);
+  if (!active.length) return "—";
+  let denominator = 0;
+  let total = 0;
+  for (const ticket of active) {
+    const rawOdds = oddsLookup(ticket.combo);
+    if (rawOdds === null || rawOdds === undefined || String(rawOdds).trim() === "") return "—";
+    const odds = Number(String(rawOdds).replace(/,/g, ""));
+    if (!Number.isFinite(odds) || odds <= 0) return "—";
+    denominator += ticket.amount / odds;
+    total += ticket.amount;
+  }
+  return `${(total / denominator).toFixed(2)}倍`;
+}
+
+function betSummaryHtml(tickets) {
+  const total = tickets.reduce((sum, ticket) => sum + ticket.amount, 0);
+  return `<span>総買い目数 <b>${tickets.length}点</b></span><span>合計購入金額 <b>${formatMoney(total)}</b></span><span>合成オッズ <b>${combinedBetOdds(tickets)}</b></span>`;
+}
+
 function toggleBetLane(place, laneNo) {
   const selected = betBuilderState().selections[Number(place)];
   const laneNumber = Number(laneNo);
@@ -2915,8 +2936,7 @@ function renderBetSummary() {
   const summary = $("betSummary");
   if (!summary) return;
   const tickets = betBuilderState().groups.flatMap((group) => group.tickets);
-  const total = tickets.reduce((sum, ticket) => sum + ticket.amount, 0);
-  summary.innerHTML = `<span>総買い目数 <b>${tickets.length}点</b></span><span>合計購入金額 <b>${formatMoney(total)}</b></span>`;
+  summary.innerHTML = betSummaryHtml(tickets);
 }
 
 function renderBetBuilder() {
@@ -2943,7 +2963,6 @@ function renderBetBuilder() {
       </div>`;
     }).join("")}
   </section>`).join("");
-  const total = tickets.reduce((sum, ticket) => sum + ticket.amount, 0);
   return `<div class="card bet-builder-card">
     <h2>3連単フォーメーション</h2>
     <div class="bet-selector-head"><span>艇番・選手名</span><b>1着</b><b>2着</b><b>3着</b></div>
@@ -2953,7 +2972,7 @@ function renderBetBuilder() {
   <div class="card bet-list-card">
     <div class="bet-list-head"><h2>買い目一覧</h2><div class="bet-list-actions"><button type="button" class="${allSelected ? "active" : ""}" onclick="toggleAllBets()">全選択</button><button type="button" onclick="deleteSelectedBets()">選択削除</button><button type="button" onclick="deleteAllBets()">全削除</button><button type="button" onclick="setAllBetAmounts()">全て100円</button></div></div>
     <div class="bet-list">${groupRows || `<div class="note bet-empty">買い目はまだありません。</div>`}</div>
-    <div class="bet-summary" id="betSummary"><span>総買い目数 <b>${tickets.length}点</b></span><span>合計購入金額 <b>${formatMoney(total)}</b></span></div>
+    <div class="bet-summary" id="betSummary">${betSummaryHtml(tickets)}</div>
   </div>`;
 }
 
