@@ -11,7 +11,7 @@ const LIVE_DATA_BASES = (
     ? window.KYOTEI_LIVE_DATA_BASES
     : DATA_BASES.map((base) => `${base}/live`)
 ).map((base) => String(base).replace(/\/$/, ""));
-const SITE_BUILD = "20261125-live-refresh-speed";
+const SITE_BUILD = "20261128-kiryu-original-layout";
 
 let manifest = null;
 let currentPayload = null;
@@ -2292,7 +2292,7 @@ function renderRealtime() {
       <div class="note">データが取得済みになると、このタブに自動で反映されます。</div>
     </div>
     <div class="card"><h2>オリジナル展示</h2>
-      ${hasOriginal ? `<div class="table-scroll${currentVenueSlug === "kiryu" ? " kiryu-original-exhibition-wrap" : ""}"><table${currentVenueSlug === "kiryu" ? ' class="kiryu-original-exhibition-table"' : ""}>${currentVenueSlug === "kiryu" ? '<colgroup><col class="kiryu-boat-col"><col class="kiryu-name-col"><col span="4" class="kiryu-time-col"></colgroup><tr><th>艇番</th><th>選手名</th><th>半周<br>タイム</th><th>回り足</th><th>直線</th><th>展示<br>タイム</th></tr>' : '<tr><th>枠</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>'}
+      ${hasOriginal ? `<div class="table-scroll"><table><tr><th>枠</th><th>${currentVenueSlug === "kiryu" ? "半周" : "1周"}</th><th>回り足</th><th>直線</th><th>展示</th><th>合算</th><th>平均との差</th></tr>
         ${[1,2,3,4,5,6].map((n) => {
           const firstMetric = currentVenueSlug === "kiryu"
             ? firstValue(original[n]?.halfLap, original[n]?.half_lap_time)
@@ -2307,13 +2307,9 @@ function renderRealtime() {
           const diffValue = isKiryu
             ? formatKiryuExhibitionValue(original[n]?.sum_diff, true)
             : safe(firstValue(original[n]?.sum_diff, original[n]?.sum_difference, original[n]?.diff));
-          const diffCell = isKiryu
-            ? timeBadge(diffValue, valueRankClass(original, n, "sum_diff"))
-            : diffValue;
+          const diffCell = diffValue;
           const metricCells = `<td>${timeBadge(firstMetric, valueRankClass(original, n, firstMetricKey))}</td><td>${timeBadge(firstValue(original[n]?.turn, original[n]?.turn_time), valueRankClass(original, n, original[n]?.turn !== undefined ? "turn" : "turn_time"))}</td><td>${timeBadge(firstValue(original[n]?.line, original[n]?.straight, original[n]?.straight_time), valueRankClass(original, n, original[n]?.line !== undefined ? "line" : (original[n]?.straight !== undefined ? "straight" : "straight_time")))}</td><td>${exhibitionCell(original[n], rt.exhibitionStatus, valueRankClass(original, n, original[n]?.exhibition_time !== undefined ? "exhibition_time" : "sum_exhibition"))}</td>`;
-          return isKiryu
-            ? `<tr><td>${lane(n)}</td><td class="kiryu-racer-name">${safe(racerNames[n])}</td>${metricCells}</tr>`
-            : `<tr><td>${lane(n)}</td>${metricCells}<td>${timeBadge(sumValue, valueRankClass(original, n, "sum"))}</td><td>${diffCell}</td></tr>`;
+          return `<tr><td>${lane(n)}</td>${metricCells}<td>${timeBadge(sumValue, valueRankClass(original, n, "sum"))}</td><td>${diffCell}</td></tr>`;
         }).join("")}
       </table></div>` : `<div class="note">オリジナル展示はまだ未取得です。</div>`}
     </div>`;
